@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  vehicles-db:
+    container_name: vehicles-db
+    image: postgres:16.2
+    restart: always
+    volumes:
+      - ./postgress:/var/lib/postgresql/data
+    ports:
+      - 5430:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=vehicles

@@ -23,7 +23,7 @@ export class VehiclesController {
     const vehicle = await this.vehiclesService.findOne(id);
 
     if (!vehicle) {
-      throw new NotFoundException('Vehicle with id ${id} not found');
+      throw new NotFoundException(`Vehicle with id ${id} not found`);
     }
 
     return vehicle;
@@ -34,8 +34,8 @@ export class VehiclesController {
     return this.vehiclesService.update(updateVehicleDto.id, updateVehicleDto);
   }
 
-  @MessagePattern('deleteVehicle')
-  remove(@Payload('id', ParseIntPipe) id: number) {
+  @MessagePattern('hardDeleteVehicle')
+  async remove(@Payload('id', ParseIntPipe) id: number) {
     return this.vehiclesService.remove(id);
   }
 }

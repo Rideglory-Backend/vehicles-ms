@@ -1,8 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '@prisma/client';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { RpcException } from '@nestjs/microservices';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class VehiclesService extends PrismaClient implements OnModuleInit {
@@ -14,7 +15,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
       throw new Error('DATABASE_URL is not set');
     }
     super({
-      adapter: new PrismaBetterSqlite3({ url }),
+      adapter: new PrismaPg({ connectionString: url }),
     });
 
     this.logger.log('Database connected');
@@ -34,10 +35,16 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     return this.vehicle.findMany();
   }
 
-  findOne(id: number) {
-    return this.vehicle.findUnique({
+  async findOne(id: number) {
+    const vehicle = await this.vehicle.findUnique({
       where: { id }
     });
+
+    if (!vehicle) {
+      throw new RpcException(`Vehicle with id ${id} not found`);
+    }
+
+    return vehicle;
   }
 
   async update(id: number, updateVehicleDto: UpdateVehicleDto) {
@@ -54,11 +61,8 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
   async remove(id: number) {
     await this.findOne(id);
 
-    return this.vehicle.update({
+    return this.vehicle.delete({
       where: { id },
-      data: {
-        isArchived: true
-      }
     });
   }
 }

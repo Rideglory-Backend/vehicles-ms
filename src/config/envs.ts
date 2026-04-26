@@ -1,4 +1,3 @@
-
 import * as joi from 'joi'
 
 interface EnvVars {
