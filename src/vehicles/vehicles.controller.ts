@@ -1,4 +1,4 @@
-import { Controller, NotFoundException, ParseIntPipe } from '@nestjs/common';
+import { Controller, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -19,7 +19,7 @@ export class VehiclesController {
   }
 
   @MessagePattern('findOneVehicle')
-  async findOne(@Payload('id', ParseIntPipe) id: number) {
+  async findOne(@Payload('id', ParseUUIDPipe) id: string) {
     const vehicle = await this.vehiclesService.findOne(id);
 
     if (!vehicle) {
@@ -35,7 +35,7 @@ export class VehiclesController {
   }
 
   @MessagePattern('hardDeleteVehicle')
-  async remove(@Payload('id', ParseIntPipe) id: number) {
+  async remove(@Payload('id', ParseUUIDPipe) id: string) {
     return this.vehiclesService.remove(id);
   }
 }

@@ -35,7 +35,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     return this.vehicle.findMany();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const vehicle = await this.vehicle.findUnique({
       where: { id }
     });
@@ -47,7 +47,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     return vehicle;
   }
 
-  async update(id: number, updateVehicleDto: UpdateVehicleDto) {
+  async update(id: string, updateVehicleDto: UpdateVehicleDto) {
     const { id: ___, ...data } = updateVehicleDto;
 
     await this.findOne(id);
@@ -58,7 +58,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     await this.findOne(id);
 
     return this.vehicle.delete({
