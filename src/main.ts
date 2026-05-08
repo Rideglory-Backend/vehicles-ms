@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { envs } from './config/envs';
+import { RpcAllExceptionsFilter } from '@rideglory/common-lib';
 
 async function bootstrap() {
   const logger = new Logger('Main');
@@ -25,6 +26,8 @@ async function bootstrap() {
       }
     )
   )
+
+  app.useGlobalFilters(new RpcAllExceptionsFilter());
 
   await app.listen();
   logger.log(`Vehicles Microservice is running on port ${envs.port}`);

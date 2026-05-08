@@ -1,7 +1,6 @@
 import { Controller, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
-import { CreateVehicleDto } from './dto/create-vehicle.dto';
-import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CreateVehicleDto, UpdateVehiclePayloadDto } from '@rideglory/contracts';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('vehicles')
@@ -18,6 +17,11 @@ export class VehiclesController {
     return this.vehiclesService.findAll();
   }
 
+  @MessagePattern('findVehiclesByOwnerId')
+  findByOwnerId(@Payload('ownerId', ParseUUIDPipe) ownerId: string) {
+    return this.vehiclesService.findByOwnerId(ownerId);
+  }
+
   @MessagePattern('findOneVehicle')
   async findOne(@Payload('id', ParseUUIDPipe) id: string) {
     const vehicle = await this.vehiclesService.findOne(id);
@@ -30,8 +34,9 @@ export class VehiclesController {
   }
 
   @MessagePattern('updateVehicle')
-  update(@Payload() updateVehicleDto: UpdateVehicleDto) {
-    return this.vehiclesService.update(updateVehicleDto.id, updateVehicleDto);
+  update(@Payload() updateVehicleDto: UpdateVehiclePayloadDto) {
+    const { id, ...data } = updateVehicleDto;
+    return this.vehiclesService.update(id, data);
   }
 
   @MessagePattern('hardDeleteVehicle')
