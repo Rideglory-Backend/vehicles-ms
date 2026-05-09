@@ -24,6 +24,29 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     this.logger.log('Database connected');
   }
 
+  /**
+   * Clients may send date-only-time local strings without offset (e.g. from Dart
+   * `toIso8601String()`). Prisma expects full ISO-8601 with zone.
+   */
+  private normalizePurchaseDate(value: string | undefined | null): Date | undefined {
+    if (value == null || value === '') {
+      return undefined;
+    }
+    const trimmed = String(value).trim();
+    const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(trimmed);
+    const looksLikeLocalNaive =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?$/.test(trimmed);
+    const iso = !hasZone && looksLikeLocalNaive ? `${trimmed}Z` : trimmed;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Invalid purchaseDate; expected ISO-8601 date-time',
+      });
+    }
+    return d;
+  }
+
   private async validateOwnerExists(ownerId: string) {
     try {
       await firstValueFrom(
@@ -44,8 +67,20 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
   async create(createVehicleDto: CreateVehicleDto) {
     await this.validateOwnerExists(createVehicleDto.ownerId);
 
+    const existingCount = await this.vehicle.count({
+      where: { ownerId: createVehicleDto.ownerId },
+    });
+
+    const { purchaseDate, ...rest } = createVehicleDto;
+
     return this.vehicle.create({
-      data: createVehicleDto
+      data: {
+        ...rest,
+        ...(purchaseDate != null && purchaseDate !== ''
+          ? { purchaseDate: this.normalizePurchaseDate(purchaseDate) }
+          : {}),
+        isMainVehicle: existingCount === 0,
+      },
     });
   }
 
@@ -57,6 +92,37 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     return this.vehicle.findMany({
       where: { ownerId },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findMainVehicleByOwnerId(ownerId: string) {
+    return this.vehicle.findFirst({
+      where: { ownerId, isMainVehicle: true },
+    });
+  }
+
+  async setMainVehicleForOwner(ownerId: string, vehicleId: string) {
+    const target = await this.vehicle.findUnique({
+      where: { id: vehicleId },
+    });
+
+    if (!target || target.ownerId !== ownerId) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: 'Vehicle not found or does not belong to this owner',
+      });
+    }
+
+    return this.$transaction(async (tx) => {
+      await tx.vehicle.updateMany({
+        where: { ownerId, isMainVehicle: true },
+        data: { isMainVehicle: false },
+      });
+
+      return tx.vehicle.update({
+        where: { id: vehicleId },
+        data: { isMainVehicle: true },
+      });
     });
   }
 
@@ -79,17 +145,56 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
 
     await this.findOne(id);
 
+    const { purchaseDate, ...rest } = updateVehicleDto;
+
     return this.vehicle.update({
       where: { id },
-      data: updateVehicleDto
+      data: {
+        ...rest,
+        ...(purchaseDate !== undefined
+          ? {
+              purchaseDate:
+                purchaseDate === null || purchaseDate === ''
+                  ? null
+                  : this.normalizePurchaseDate(purchaseDate),
+            }
+          : {}),
+      },
     });
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-
-    return this.vehicle.delete({
+    const existing = await this.vehicle.findUnique({
       where: { id },
+    });
+
+    if (!existing) {
+      throw new RpcException(`Vehicle with id ${id} not found`);
+    }
+
+    const wasMain = existing.isMainVehicle;
+    const ownerId = existing.ownerId;
+
+    return this.$transaction(async (tx) => {
+      await tx.vehicle.delete({
+        where: { id },
+      });
+
+      if (wasMain) {
+        const next = await tx.vehicle.findFirst({
+          where: { ownerId },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (next) {
+          await tx.vehicle.update({
+            where: { id: next.id },
+            data: { isMainVehicle: true },
+          });
+        }
+      }
+
+      return existing;
     });
   }
 }

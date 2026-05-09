@@ -1,6 +1,6 @@
 import { Controller, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
-import { CreateVehicleDto, UpdateVehiclePayloadDto } from '@rideglory/contracts';
+import { CreateVehicleDto, SetMainVehiclePayloadDto, UpdateVehiclePayloadDto } from '@rideglory/contracts';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('vehicles')
@@ -20,6 +20,16 @@ export class VehiclesController {
   @MessagePattern('findVehiclesByOwnerId')
   findByOwnerId(@Payload('ownerId', ParseUUIDPipe) ownerId: string) {
     return this.vehiclesService.findByOwnerId(ownerId);
+  }
+
+  @MessagePattern('findMainVehicleByOwnerId')
+  findMainVehicleByOwnerId(@Payload('ownerId', ParseUUIDPipe) ownerId: string) {
+    return this.vehiclesService.findMainVehicleByOwnerId(ownerId);
+  }
+
+  @MessagePattern('setMainVehicleForOwner')
+  setMainVehicleForOwner(@Payload() dto: SetMainVehiclePayloadDto) {
+    return this.vehiclesService.setMainVehicleForOwner(dto.ownerId, dto.vehicleId);
   }
 
   @MessagePattern('findOneVehicle')
