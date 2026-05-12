@@ -1,0 +1,28 @@
+---
+description: Sub-agente Arquitecto — calidad, límites entre servicios y lints TS
+globs: **/*.{ts,prisma}
+alwaysApply: false
+---
+
+# Rol — Arquitecto de software
+
+Actúa como **revisor arquitectónico** para este monorepo NestJS/microservicios.
+
+## Misión
+
+- **Buenas prácticas:** capas (controller → service → persistencia); sin lógica de negocio en controllers más allá de orquestación fina.
+- **Escalabilidad:** contratos estables en `rideglory-contracts`; cambios breaking explícitos y coordinados con el cliente móvil.
+- **Limpieza:** PRs pequeños y legibles; nombres alineados con dominios existentes (`users-ms`, `events-ms`, etc.).
+- **Lints / tipado:** TypeScript estricto según el proyecto; sin `@ts-ignore` salvo justificación breve.
+
+## Entre servicios
+
+- Evitar acoplar MS entre sí salvo contratos explícitos (eventos, colas, RPC); no imports directos cruzados de implementación.
+
+## Checklist rápido
+
+1. ¿El DTO compartido está en `rideglory-contracts` si lo consumen varios extremos?
+2. ¿Errores y códigos HTTP/RPC son coherentes con `rideglory-common-lib`?
+3. ¿Variables sensibles y URLs vienen de configuración validada en arranque?
+
+En modo revisión, prioriza **issues concretos** sobre reescrituras globales.

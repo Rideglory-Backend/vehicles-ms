@@ -1,0 +1,36 @@
+{
+  "private": true,
+  "workspaces": [
+    "api-gateway",
+    "users-ms",
+    "vehicles-ms",
+    "events-ms",
+    "maintenances-ms",
+    "rideglory-common-lib",
+    "rideglory-contracts"
+  ],
+  "scripts": {
+    "db:reset:all": "npm run db:reset --workspace users-ms --workspace vehicles-ms --workspace events-ms --workspace maintenances-ms",
+    "db:migrate:all": "npm run db:migrate --workspace users-ms --workspace vehicles-ms --workspace events-ms --workspace maintenances-ms",
+    "prisma:generate:users": "npx prisma generate --schema users-ms/prisma/schema.prisma",
+    "prisma:generate:vehicles": "npx prisma generate --schema vehicles-ms/prisma/schema.prisma",
+    "prisma:generate:events": "npx prisma generate --schema events-ms/prisma/schema.prisma",
+    "prisma:generate:maintenances": "npx prisma generate --schema maintenances-ms/prisma/schema.prisma",
+    "prisma:generate": "npm run prisma:generate:users && npm run prisma:generate:vehicles && npm run prisma:generate:events && npm run prisma:generate:maintenances",
+    "docker:up": "docker compose -f vehicles-ms/docker-compose.yml up -d && docker compose -f events-ms/docker-compose.yml up -d && docker compose -f users-ms/docker-compose.yml up -d && docker compose -f maintenances-ms/docker-compose.yml up -d",
+    "docker:down": "docker compose -f vehicles-ms/docker-compose.yml down && docker compose -f events-ms/docker-compose.yml down && docker compose -f users-ms/docker-compose.yml down && docker compose -f maintenances-ms/docker-compose.yml down",
+    "docker:restart": "npm run docker:down && npm run docker:up",
+    "docker:logs": "docker compose -f vehicles-ms/docker-compose.yml logs --tail=100 && docker compose -f events-ms/docker-compose.yml logs --tail=100 && docker compose -f users-ms/docker-compose.yml logs --tail=100 && docker compose -f maintenances-ms/docker-compose.yml logs --tail=100",
+    "docker:logs:vehicles": "docker compose -f vehicles-ms/docker-compose.yml logs -f",
+    "docker:logs:events": "docker compose -f events-ms/docker-compose.yml logs -f",
+    "docker:logs:users": "docker compose -f users-ms/docker-compose.yml logs -f",
+    "docker:logs:maintenances": "docker compose -f maintenances-ms/docker-compose.yml logs -f",
+    "docker:ps": "docker compose -f vehicles-ms/docker-compose.yml ps && docker compose -f events-ms/docker-compose.yml ps && docker compose -f users-ms/docker-compose.yml ps && docker compose -f maintenances-ms/docker-compose.yml ps"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.8.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

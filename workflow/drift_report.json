@@ -1,0 +1,64 @@
+{
+  "generatedAt": "2026-05-09T03:51:32Z",
+  "requirementCoverage": {
+    "status": "skipped",
+    "reason": "No catalog file; planning owns assumptions/risks in handoffs. Add workflow/requirements_catalog.json (optional) for automated coverage checks."
+  },
+  "artifacts": {
+    "planExists": true,
+    "planNonEmpty": true
+  },
+  "summary": {
+    "missingInPlan": 0,
+    "missingInTasksOrStories": 0,
+    "backlogTasksWithoutStoryTrace": 8
+  },
+  "missingInPlan": [],
+  "missingInTasksOrStories": [],
+  "backlogTasksWithoutStoryTrace": [
+    {
+      "id": "T-6-1",
+      "title": "Frontend: integrate react-i18next + i18next; create web/src/locales/en.json + es.json with all t() keys from iters 1\u20136; language switcher component in DashboardLayout (keyboard-operable, updates lang attr on html); all new copy via t() wrappers",
+      "agent": "frontend"
+    },
+    {
+      "id": "T-6-2",
+      "title": "Backend: add Sentry SDK to all backend services (SENTRY_DSN_BACKEND env var, Axum integration, traces_sample_rate=0.1, before_send filter for password_hash + whatsapp_phone); Frontend: add @sentry/react (SENTRY_DSN_FRONTEND env var); verify test error appears in Sentry dashboard",
+      "agent": "backend"
+    },
+    {
+      "id": "T-6-3",
+      "title": "Write migration 18 (audit_log: id BIGSERIAL PK, user_id UUID NULL FK users, event_type TEXT NOT NULL, entity_type TEXT NULL, entity_id TEXT NULL, detail JSONB, ip_address TEXT NULL, created_at TIMESTAMPTZ); add write_audit_log calls in auth-service (login/logout/password_change/role_change), telegram-service (connect/disconnect), mt-bridge (settings_change/risk_change), admin write routes; implement GET /api/v1/admin/audit-log paginated (admin-only)",
+      "agent": "backend"
+    },
+    {
+      "id": "T-6-4",
+      "title": "Frontend: admin audit log page (/admin/audit-log) \u2014 paginated table with event_type (human-readable labels), entity, user email, IP, timestamp; admin-only JWT guard",
+      "agent": "frontend"
+    },
+    {
+      "id": "T-6-5",
+      "title": "DevOps: Terraform (infra/aws-free-tier/main.tf) \u2014 add aws_s3_bucket (private, AES256 SSE) + aws_s3_bucket_public_access_block (all 4 true) + IAM EC2 role S3 policy (PutObject/GetObject/DeleteObject) + port 443 HTTPS SG ingress rule; bash deploy script (infra/aws/deploy.sh) exits 0; update DEPLOY.md with full step-by-step (terraform init \u2192 apply \u2192 deploy script \u2192 live URLs), seed admin smoke check, INTERNAL_API_KEY enforcement, terraform.tfstate backup, MT4 migration path, Sentry plan limits, Telegram bot setup steps",
+      "agent": "devops"
+    },
+    {
+      "id": "T-6-6",
+      "title": "Backend: implement GET /api/v1/s3/presigned-url \u2014 scoped to requesting user's user_id/ key prefix; arbitrary key paths return HTTP 403; S3_BUCKET_NAME + AWS_REGION + S3_PRESIGN_TTL_SECS env vars; wire bot /start handler to overwrite telegram_bot_links row with real chat_id (carry-forward #4); enforce INTERNAL_API_KEY non-empty in compose prod overlay (carry-forward #6)",
+      "agent": "backend"
+    },
+    {
+      "id": "T-6-7",
+      "title": "DevOps + QA: scripts/smoke-test.sh exits 0 on all assertions (all services healthy, seed admin login, Telegram connect 200, signal simulate 200); document as post-deploy validation step in DEPLOY.md; docker compose up --build \u2192 18+ services healthy \u2192 smoke exits 0",
+      "agent": "devops"
+    },
+    {
+      "id": "T-6-8",
+      "title": "QA: cargo tests \u2014 audit_log_login_event_written, audit_log_admin_only_returns_403_for_trader, s3_presigned_url_rejects_foreign_key_prefix, smoke_test_exits_zero_on_localhost; re-verify 4 deferred iter-5 TCs on live stack; cargo clippy exits 0; tsc --noEmit exits 0",
+      "agent": "qa"
+    }
+  ],
+  "notes": [
+    "Framework-agnostic: PRD is not parsed. Optional catalog drives requirement overlap checks.",
+    "Assumptions and risks should appear in planning handoffs (docs/handoffs/planning/)."
+  ]
+}

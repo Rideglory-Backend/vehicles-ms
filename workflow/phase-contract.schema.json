@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gorilla.local/schemas/phase-contract.json",
+  "title": "Iteration phase contract",
+  "type": "object",
+  "required": [
+    "iteration",
+    "phase",
+    "status",
+    "updatedAt",
+    "metrics",
+    "artifacts",
+    "qualityGates"
+  ],
+  "properties": {
+    "iteration": { "type": "integer", "minimum": 1 },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "po_scope",
+        "architect",
+        "design",
+        "backend",
+        "frontend",
+        "qa",
+        "devops",
+        "pr",
+        "tech_lead",
+        "po_close"
+      ]
+    },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "updatedAt": { "type": "string" },
+    "summary": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "required": ["tokens", "costUsd"],
+      "properties": {
+        "tokens": { "type": "integer", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "qualityGates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["pass", "fail", "warn"] },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

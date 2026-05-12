@@ -1,0 +1,46 @@
+{
+  "project": "rideglory-api",
+  "prdPath": "docs/PRD.md",
+  "planStatus": "not_started",
+  "currentIteration": 0,
+  "existingSystem": {
+    "basePath": "/Users/cami/Developer/Personal/rideglory-api",
+    "notes": "Brownfield NestJS microservices API. Gateway + tracking service + event management + user management microservices. Firebase Auth validation. WebSocket tracking endpoint. Serves the Rideglory Flutter app."
+  },
+  "iterations": [
+    {
+      "id": 0,
+      "goal": "Framework: PRD, agents, handoffs, workflow, dashboard, CLI commands",
+      "status": "done",
+      "notes": "Run /solo-plan to define product iterations. Framework installed from Claude-cami reference."
+    }
+  ],
+  "agents": {
+    "po": { "status": "idle", "lastAction": null, "focus": null },
+    "architect": { "status": "idle", "lastAction": null, "focus": null },
+    "design": { "status": "idle", "lastAction": null, "focus": null },
+    "backend": { "status": "idle", "lastAction": null, "focus": null },
+    "frontend": { "status": "idle", "lastAction": null, "focus": null },
+    "qa": { "status": "idle", "lastAction": null, "focus": null },
+    "tech_lead": { "status": "idle", "lastAction": null, "focus": null },
+    "devops": { "status": "idle", "lastAction": null, "focus": null }
+  },
+  "tasks": [
+    {
+      "id": "T-0-1",
+      "title": "Framework ready — run /solo-plan to plan API iterations from the PRD",
+      "agent": "po",
+      "status": "done",
+      "iteration": 0,
+      "updatedAt": "2026-05-11T00:00:00Z"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-05-11T00:00:00Z",
+      "type": "framework_baseline",
+      "agent": "system",
+      "detail": "Clean workflow state for rideglory-api (NestJS brownfield). Microservices: gateway, tracking, events, users. No product plan until /solo-plan."
+    }
+  ]
+}

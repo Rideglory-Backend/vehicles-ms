@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-05-11T21:08:41Z",
+  "currentIteration": 1,
+  "phaseDurationMinutes": {
+    "po_scope": {
+      "avgMinutes": 15.0,
+      "maxMinutes": 15.0,
+      "samples": 1
+    }
+  },
+  "retriesByRole": [],
+  "failuresByRole": [],
+  "tokenCost": {
+    "totalTokens": 0,
+    "totalCostUsd": 0.0,
+    "byPhase": {
+      "po_scope": {
+        "tokens": 0,
+        "costUsd": 0.0,
+        "samples": 1,
+        "role": "po"
+      }
+    },
+    "byIteration": [
+      {
+        "iteration": 1,
+        "status": "active",
+        "phaseDurationsMinutes": {
+          "po_scope": 15.0
+        },
+        "tokenCost": {
+          "tokens": 0,
+          "costUsd": 0.0
+        }
+      },
+      {
+        "iteration": 2,
+        "status": "planned",
+        "phaseDurationsMinutes": {},
+        "tokenCost": {
+          "tokens": 0,
+          "costUsd": 0.0
+        }
+      },
+      {
+        "iteration": 3,
+        "status": "planned",
+        "phaseDurationsMinutes": {},
+        "tokenCost": {
+          "tokens": 0,
+          "costUsd": 0.0
+        }
+      },
+      {
+        "iteration": 4,
+        "status": "planned",
+        "phaseDurationsMinutes": {},
+        "tokenCost": {
+          "tokens": 0,
+          "costUsd": 0.0
+        }
+      }
+    ]
+  },
+  "topBlockCauses": [],
+  "notes": [
+    "Token and cost metrics require `metrics.tokens` and `metrics.costUsd` in phase contracts.",
+    "Retries/failures/blocked causes are inferred from workflow events."
+  ]
+}

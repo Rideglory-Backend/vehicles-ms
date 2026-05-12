@@ -1,0 +1,31 @@
+{
+  "iteration": 1,
+  "phase": "backend",
+  "status": "pass",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "summary": "Phase delivered with mandatory artifacts and quality checks.",
+  "metrics": {
+    "tokens": 0,
+    "costUsd": 0.0
+  },
+  "artifacts": [
+    "docs/handoffs/backend.md"
+  ],
+  "qualityGates": [
+    {
+      "name": "required_artifacts_present",
+      "status": "pass",
+      "detail": "All required artifacts were generated."
+    },
+    {
+      "name": "tests_passed_or_accepted",
+      "status": "pass",
+      "detail": "Automated tests passed or approved deferral exists."
+    },
+    {
+      "name": "security_checks",
+      "status": "pass",
+      "detail": "Security checks completed for this phase scope."
+    }
+  ]
+}

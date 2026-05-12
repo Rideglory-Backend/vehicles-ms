@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gorilla.local/schemas/workflow-state.json",
+  "title": "Solo-mode workflow state",
+  "type": "object",
+  "required": ["project", "prdPath", "currentIteration", "agents", "tasks", "events"],
+  "properties": {
+    "project": { "type": "string" },
+    "prdPath": { "type": "string" },
+    "brdPath": { "type": "string" },
+    "planStatus": {
+      "type": "string",
+      "enum": ["not_started", "awaiting_approval", "approved"]
+    },
+    "currentIteration": { "type": "integer", "minimum": 0 },
+    "plan": {
+      "type": "object",
+      "properties": {
+        "generatedAt": { "type": "string" },
+        "feedbackIncorporated": { "type": "boolean" },
+        "summary": { "type": "string" },
+        "proposedStack": {
+          "type": "object",
+          "properties": {
+            "frontend": {
+              "type": "object",
+              "properties": {
+                "framework": { "type": "string" },
+                "rationale": { "type": "string" },
+                "stateManagement": { "type": "string" },
+                "styling": { "type": "string" }
+              }
+            },
+            "backend": {
+              "type": "object",
+              "properties": {
+                "runtime": { "type": "string" },
+                "framework": { "type": "string" },
+                "rationale": { "type": "string" }
+              }
+            },
+            "database": {
+              "type": "object",
+              "properties": {
+                "engine": { "type": "string" },
+                "rationale": { "type": "string" },
+                "migrationTool": { "type": "string" }
+              }
+            },
+            "devops": {
+              "type": "object",
+              "properties": {
+                "localDev": { "type": "string" },
+                "ci": { "type": "string" },
+                "deployment": { "type": "string" },
+                "rationale": { "type": "string" }
+              }
+            },
+            "qa": {
+              "type": "object",
+              "properties": {
+                "frameworks": { "type": "string" },
+                "coverage": { "type": "string" },
+                "playwrightAvailable": { "type": "boolean" }
+              }
+            },
+            "security": {
+              "type": "object",
+              "properties": {
+                "passwordHashing": { "type": "string" },
+                "secrets": { "type": "string" }
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "madeBy": { "type": "string" },
+              "impact": { "type": "string" }
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "likelihood": { "type": "string" },
+              "mitigation": { "type": "string" }
+            }
+          }
+        },
+        "deferred": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": { "type": "string" },
+              "reason": { "type": "string" },
+              "candidate": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "iterations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "goal", "status"],
+        "properties": {
+          "id": { "type": "integer" },
+          "goal": { "type": "string" },
+          "status": { "enum": ["planned", "active", "done", "blocked"] },
+          "notes": { "type": "string" },
+          "primaryAgents": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "definitionOfDone": { "type": "string" },
+          "stories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "story": { "type": "string" },
+                "acceptance": { "type": "string" }
+              }
+            }
+          },
+          "architectNotes": { "type": "string" },
+          "designNotes": { "type": "string" },
+          "techLeadNotes": { "type": "string" }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "enum": ["idle", "active", "blocked", "done"] },
+          "lastAction": { "type": ["string", "null"] },
+          "focus": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "agent", "status", "iteration"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "agent": { "type": "string" },
+          "status": { "enum": ["backlog", "in_progress", "done", "cancelled"] },
+          "iteration": { "type": "integer" },
+          "updatedAt": { "type": "string" }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["at", "type", "detail"],
+        "properties": {
+          "at": { "type": "string" },
+          "type": { "type": "string" },
+          "agent": { "type": "string" },
+          "iteration": { "type": "integer" },
+          "phase": {
+            "type": "string",
+            "description": "SDLC step: po_scope, architect, design, backend, frontend, qa, devops, pr, tech_lead, po_close"
+          },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

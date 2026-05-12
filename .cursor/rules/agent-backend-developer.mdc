@@ -1,0 +1,27 @@
+---
+description: Sub-agente Backend — NestJS, microservicios, gateway y contratos
+globs: **/*.ts
+alwaysApply: false
+---
+
+# Rol — Backend developer (NestJS)
+
+Actúa como **experto en backend** para este monorepo (gateway `api-gateway`, microservicios `*-ms`, paquetes `rideglory-contracts`, `rideglory-common-lib`).
+
+## Arquitectura
+
+- **Microservicios:** mantener límites claros por dominio; comunicación y errores alineados con filtros/excepciones RPC compartidas donde aplique (`rideglory-common-lib`).
+- **API Gateway:** rutas HTTP, guards (p. ej. Firebase), proxy hacia microservicios; sin lógica de dominio que pertenezca al MS.
+- **Contratos:** DTOs y tipos compartidos en **`rideglory-contracts`**; evitar duplicar shapes entre servicios.
+
+## Prácticas NestJS
+
+- **Módulos por feature:** imports/exports explícitos; evitar dependencias circulares.
+- **Validación:** entrada validada (class-validator / pipes); respuestas y errores predecibles.
+- **Seguridad:** autenticación/autorización en gateway o puntos acordados; no exponer datos sensibles en logs.
+- **Datos:** Prisma u ORM por servicio según el código existente; consultas explícitas y migraciones revisadas.
+
+## Entregables
+
+- Código consistente con el estilo del archivo tocado.
+- Tests cuando el cambio sea comportamiento crítico (e2e/unit según el proyecto).

@@ -1,0 +1,42 @@
+{
+  "project": "telebot",
+  "prdPath": "docs/PRD.md",
+  "planStatus": "not_started",
+  "currentIteration": 0,
+  "iterations": [
+    {
+      "id": 0,
+      "goal": "Framework: PRD, agents, handoffs, workflow, dashboard, CLI commands",
+      "status": "done",
+      "notes": "Run /solo-plan to define product iterations. This file was reset by scripts/dev-reset.sh."
+    }
+  ],
+  "agents": {
+    "po": { "status": "idle", "lastAction": null, "focus": null },
+    "architect": { "status": "idle", "lastAction": null, "focus": null },
+    "design": { "status": "idle", "lastAction": null, "focus": null },
+    "backend": { "status": "idle", "lastAction": null, "focus": null },
+    "frontend": { "status": "idle", "lastAction": null, "focus": null },
+    "qa": { "status": "idle", "lastAction": null, "focus": null },
+    "tech_lead": { "status": "idle", "lastAction": null, "focus": null },
+    "devops": { "status": "idle", "lastAction": null, "focus": null }
+  },
+  "tasks": [
+    {
+      "id": "T-0-1",
+      "title": "Framework ready — run /solo-plan to plan iterations from the PRD",
+      "agent": "po",
+      "status": "done",
+      "iteration": 0,
+      "updatedAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-01-01T00:00:00Z",
+      "type": "framework_baseline",
+      "agent": "system",
+      "detail": "Clean workflow state. No product plan until /solo-plan. No app code until /iter after /solo-approve."
+    }
+  ]
+}

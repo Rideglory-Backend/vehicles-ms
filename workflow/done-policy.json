@@ -1,0 +1,131 @@
+{
+  "version": "1.0",
+  "description": "Policy-as-code for role definition-of-done validation.",
+  "roles": {
+    "po": {
+      "requiredHandoff": "docs/handoffs/po.md",
+      "requiredHeadings": [
+        "## Iteration goal",
+        "## Stories for this iteration",
+        "## Assumptions and open questions",
+        "## Out of scope (this iteration)",
+        "## Next agent needs to know",
+        "## Change log"
+      ],
+      "requiredPhaseContracts": [
+        "po_scope",
+        "po_close"
+      ]
+    },
+    "architect": {
+      "requiredHandoff": "docs/handoffs/architect.md",
+      "requiredHeadings": [
+        "## Stack decisions",
+        "## Data model",
+        "## API contracts",
+        "## Environment variables",
+        "## Risks and open questions",
+        "## Change log"
+      ],
+      "requiredArtifacts": [
+        "docs/handoffs/architect-for-backend.md",
+        "docs/handoffs/architect-for-frontend.md",
+        "docs/handoffs/architect-for-devops.md",
+        "docs/handoffs/architect-for-qa.md",
+        "docs/architecture/DIAGRAMS.md"
+      ],
+      "requiredPhaseContracts": [
+        "architect"
+      ]
+    },
+    "design": {
+      "requiredHandoff": "docs/handoffs/design.md",
+      "requiredHeadings": [
+        "## Design system baseline",
+        "## Screens and states",
+        "## Component hierarchy",
+        "## UI copy",
+        "## Error messages (must match API error codes)",
+        "## Accessibility notes",
+        "## Design tool artifacts (Pencil / Stitch / HTML mockups)",
+        "## Change log"
+      ],
+      "requiredPhaseContracts": [
+        "design"
+      ]
+    },
+    "backend": {
+      "requiredHandoff": "docs/handoffs/backend.md",
+      "requiredHeadings": [
+        "## Endpoints delivered",
+        "## Data and migrations",
+        "## Validation and security",
+        "## Test results",
+        "## Known gaps",
+        "## Change log"
+      ],
+      "requiredPhaseContracts": [
+        "backend"
+      ]
+    },
+    "frontend": {
+      "requiredHandoff": "docs/handoffs/frontend.md",
+      "requiredHeadings": [
+        "## Screens delivered",
+        "## API integration",
+        "## Validation and state handling",
+        "## Test results",
+        "## Known gaps",
+        "## Change log"
+      ],
+
+      "requiredPhaseContracts": [
+        "frontend"
+      ]
+    },
+    "qa": {
+      "requiredHandoff": "docs/handoffs/qa.md",
+      "requiredHeadings": [
+        "## Test catalog",
+        "## Automated results",
+        "## Bugs filed",
+        "## Deferred coverage",
+        "## Sign-off",
+        "## Change log"
+      ],
+      "requiredPhaseContracts": [
+        "qa"
+      ]
+    },
+    "devops": {
+      "requiredHandoff": "docs/handoffs/devops.md",
+      "requiredHeadings": [
+        "## CI pipeline",
+        "## Local dev setup",
+        "## Environment variables in CI",
+        "## Known gaps",
+        "## Change log"
+      ],
+      "requiredArtifacts": [
+        "docs/DEPLOY.md"
+      ],
+      "requiredPhaseContracts": [
+        "devops"
+      ]
+    },
+    "tech_lead": {
+      "requiredHandoff": "docs/handoffs/tech_lead.md",
+      "requiredHeadings": [
+        "## Pull request",
+        "## Blocking issues",
+        "## Security findings",
+        "## Test coverage assessment",
+        "## Overall signal",
+        "## Change log"
+      ],
+      "requiredPhaseContracts": [
+        "tech_lead"
+      ]
+    }
+  }
+}

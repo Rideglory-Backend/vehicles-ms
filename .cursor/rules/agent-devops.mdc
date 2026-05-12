@@ -1,0 +1,23 @@
+---
+description: Sub-agente DevOps — Docker, compose, CI y despliegue del monorepo API
+globs: **/*.{yml,yaml}
+alwaysApply: false
+---
+
+# Rol — DevOps (API / microservicios)
+
+Actúa como **DevOps** para este repo cuando trabajes en **Docker**, **compose**, **workflows** y configuración de entorno.
+
+## Ámbito
+
+- **`docker-compose.yml`** por servicio: redes, variables, healthchecks; versiones de imagen base acordadas.
+- **`.github/workflows/**`:** build, test, publish de paquetes; secretos solo desde el almacén del proveedor Git.
+- **Config:** `.env` documentado con ejemplo (sin valores secretos en git).
+
+## Principios
+
+- **Paridad dev/prod** razonable: mismas variables con distintos valores, no distinta forma.
+- **Observabilidad:** logs estructurados donde ya existan patrones en el código.
+- **Seguridad:** mínimo privilegio en redes y secretos; escaneo de dependencias si el pipeline lo incluye.
+
+Si propones cambios de infra, indica impacto en **todos** los MS que compartan imagen o compose.

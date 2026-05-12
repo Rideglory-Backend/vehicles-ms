@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solo mode — Agent workflow</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #1c2128;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #7d8590;
+        --accent: #58a6ff;
+        --ok: #3fb950;
+        --warn: #d29922;
+        --bad: #f85149;
+        --purple: #bc8cff;
+        --teal: #39d353;
+        --r: 8px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        font-size: 14px;
+      }
+      a { color: var(--accent); text-decoration: none; }
+
+      /* ── Layout ─────────────────────────────────────────── */
+      .app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+      .topbar {
+        padding: 0.9rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.25rem;
+        background: var(--surface);
+        position: sticky; top: 0; z-index: 10;
+      }
+      .topbar h1 { font-size: 1rem; font-weight: 600; }
+      .topbar .sub { font-size: 0.8rem; color: var(--muted); }
+      .topbar .pill {
+        margin-left: auto; font-size: 0.75rem; padding: 0.2rem 0.65rem;
+        border-radius: 20px; border: 1px solid var(--border); color: var(--muted);
+        display: flex; align-items: center; gap: 0.35rem;
+      }
+      .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+      .body { display: grid; grid-template-columns: 1fr 300px; }
+      @media(max-width:900px){ .body { grid-template-columns: 1fr; } }
+      main { padding: 1.25rem 1.5rem 3rem; overflow: auto; }
+      aside { border-left: 1px solid var(--border); padding: 1.1rem 1.1rem 2rem; overflow: auto; background: #0b0f14; }
+
+      /* ── Sections ───────────────────────────────────────── */
+      .section { margin-bottom: 1.75rem; }
+      .section-label {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: .06em;
+        color: var(--muted); margin-bottom: 0.65rem; font-weight: 600;
+      }
+
+      /* ── Banner ─────────────────────────────────────────── */
+      .banner {
+        padding: 0.75rem 1rem; border-radius: var(--r); border: 1px solid;
+        display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 1.5rem;
+        font-size: 0.85rem;
+      }
+      .banner.not_started { border-color: var(--border); color: var(--muted); background: var(--surface2); }
+      .banner.awaiting    { border-color: var(--warn); color: var(--warn); background: #1f1700; }
+      .banner.approved    { border-color: var(--ok);  color: var(--ok);  background: #0b1f0e; }
+      .banner .bicon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+      .banner .btxt  { flex: 1; }
+      .banner .btxt strong { display: block; margin-bottom: 0.2rem; }
+      .banner code { background: rgba(255,255,255,.08); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.8rem; }
+
+      /* ── Iterations ─────────────────────────────────────── */
+      .iter-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); margin-bottom: 0.9rem; overflow: hidden;
+      }
+      .iter-head {
+        padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+        cursor: pointer; user-select: none;
+      }
+      .iter-head:hover { background: var(--surface2); }
+      .iter-num {
+        width: 28px; height: 28px; border-radius: 6px; background: var(--surface2);
+        border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: 700; color: var(--accent); flex-shrink: 0;
+      }
+      .iter-goal { flex: 1; font-size: 0.9rem; font-weight: 500; }
+      .iter-agents { display: flex; gap: 4px; }
+      .agent-chip {
+        font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 20px;
+        background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+        white-space: nowrap;
+      }
+      .iter-status-badge {
+        font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 20px; flex-shrink: 0;
+        border: 1px solid;
+      }
+      .badge-planned  { color: var(--muted); border-color: var(--border); }
+      .badge-active   { color: var(--accent); border-color: var(--accent); }
+      .badge-done     { color: var(--ok); border-color: var(--ok); }
+      .badge-blocked  { color: var(--bad); border-color: var(--bad); }
+      .chevron { color: var(--muted); font-size: 0.7rem; flex-shrink: 0; transition: transform .2s; }
+      .chevron.open { transform: rotate(90deg); }
+
+      .iter-body { display: none; border-top: 1px solid var(--border); padding: 0.85rem 1rem 1rem; }
+      .iter-body.open { display: block; }
+
+      .iter-dod {
+        font-size: 0.8rem; color: var(--muted); margin-bottom: 0.85rem;
+        padding: 0.5rem 0.75rem; background: var(--surface2); border-radius: 6px;
+        border-left: 3px solid var(--accent);
+      }
+      .iter-dod strong { color: var(--text); }
+
+      .stories-table { width: 100%; border-collapse: collapse; margin-bottom: 0.85rem; }
+      .stories-table th { text-align: left; padding: 0.35rem 0.5rem; font-size: 0.7rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+      .stories-table td { padding: 0.4rem 0.5rem; font-size: 0.8rem; vertical-align: top; border-bottom: 1px solid #21262d; }
+      .stories-table tr:last-child td { border-bottom: none; }
+      .story-id { color: var(--accent); white-space: nowrap; font-weight: 600; }
+
+      .agent-notes { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; margin-top: 0.75rem; }
+      @media(max-width:700px){ .agent-notes { grid-template-columns: 1fr; } }
+      .note-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.7rem; font-size: 0.78rem; }
+      .note-card .note-who { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 0.3rem; }
+      .note-card.architect .note-who { color: var(--accent); }
+      .note-card.design    .note-who { color: var(--purple); }
+      .note-card.tech_lead .note-who { color: var(--warn); }
+      .note-card .note-body { color: var(--muted); line-height: 1.45; }
+
+      /* ── Plan meta tables ────────────────────────────────── */
+      .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+      @media(max-width:700px){ .meta-grid { grid-template-columns: 1fr; } }
+      .meta-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.75rem 0.9rem; }
+      .meta-card h4 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 0.6rem; }
+      .meta-list { list-style: none; }
+      .meta-list li { font-size: 0.8rem; padding: 0.35rem 0; border-bottom: 1px solid #21262d; display: flex; flex-direction: column; gap: 0.15rem; }
+      .meta-list li:last-child { border-bottom: none; }
+      .meta-list .ml-label { font-weight: 500; }
+      .meta-list .ml-sub { color: var(--muted); font-size: 0.75rem; }
+      .risk-high { color: var(--bad); }
+      .risk-medium { color: var(--warn); }
+      .risk-low { color: var(--ok); }
+
+      /* ── Agents grid ─────────────────────────────────────── */
+      .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 0.65rem; }
+      .agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 0.85rem; }
+      .agent-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+      .dot.idle    { background: var(--border); }
+      .dot.active  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+      .dot.blocked { background: var(--bad); }
+      .dot.done    { background: var(--ok); }
+      .agent-name  { font-size: 0.85rem; font-weight: 600; }
+      .agent-focus { font-size: 0.77rem; color: var(--muted); }
+      .agent-last  { font-size: 0.72rem; color: #555d68; margin-top: 0.2rem; }
+
+      /* ── Aside ───────────────────────────────────────────── */
+      .aside-section { margin-bottom: 1.4rem; }
+      .aside-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-bottom: 0.55rem; }
+
+      /* Tasks */
+      .task-row { padding: 0.45rem 0.5rem; border-bottom: 1px solid #1c2128; font-size: 0.78rem; display: flex; gap: 0.5rem; align-items: flex-start; }
+      .task-row:last-child { border-bottom: none; }
+      .task-id { color: var(--accent); font-size: 0.7rem; white-space: nowrap; padding-top: 1px; }
+      .task-title { flex: 1; color: var(--text); }
+      .task-agent { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+      .t-done   { opacity: .45; }
+      .t-status { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+      .t-done-s   { color: var(--ok);   border-color: var(--ok); }
+      .t-active-s { color: var(--accent); border-color: var(--accent); }
+      .t-back-s   { color: var(--muted); border-color: var(--border); }
+      .t-bug-s    { color: var(--bad);  border-color: var(--bad); }
+
+      /* Task board (kanban) */
+      .task-board-hint { font-size: 0.78rem; color: var(--muted); margin: 0 0 0.65rem; line-height: 1.45; }
+      .task-board-inner { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+      @media (max-width: 900px) { .task-board-inner { grid-template-columns: 1fr; } }
+      .task-col { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface2); min-height: 3.5rem; }
+      .task-col-head { padding: 0.5rem 0.65rem; font-weight: 600; font-size: 0.8rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+      .task-col-count { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+      .task-col-body { padding: 0.45rem 0.5rem 0.55rem; max-height: min(420px, 55vh); overflow-y: auto; }
+      .task-col-empty { color: var(--muted); font-size: 0.75rem; padding: 0.35rem; margin: 0; text-align: center; }
+      .task-card { padding: 0.55rem 0.65rem; margin-bottom: 0.45rem; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+      .task-card:last-child { margin-bottom: 0; }
+      .task-card.task-card-bug { border-left: 3px solid var(--bad); }
+      .task-card.task-card-done { opacity: 0.9; }
+      .task-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.35rem; margin-bottom: 0.35rem; }
+      .task-card-id { font-size: 0.68rem; color: var(--accent); font-weight: 600; white-space: nowrap; }
+      .task-card-status { font-size: 0.62rem; padding: 0.12rem 0.42rem; border-radius: 4px; font-weight: 600; flex-shrink: 0; }
+      .task-card-status.st-todo { color: var(--muted); border: 1px solid var(--border); background: var(--surface2); }
+      .task-card-status.st-in_progress { color: var(--accent); border: 1px solid var(--accent); background: rgba(88,166,255,0.08); }
+      .task-card-status.st-done { color: var(--ok); border: 1px solid var(--ok); background: rgba(63,185,80,0.1); }
+      .task-card-status.st-cancelled { color: var(--muted); border: 1px dashed var(--border); }
+      .task-card-status.st-blocked { color: var(--bad); border: 1px solid var(--bad); background: rgba(248,81,73,0.06); }
+      .task-card-title { font-size: 0.82rem; line-height: 1.35; color: var(--text); margin-bottom: 0.4rem; word-break: break-word; }
+      .task-card-agent { font-size: 0.74rem; color: var(--muted); line-height: 1.35; }
+      .task-agent-label { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.58rem; margin-right: 0.2rem; color: #8b949e; }
+      .task-card-agent strong { color: var(--text); font-weight: 600; font-size: 0.8rem; }
+      .task-iter { color: var(--muted); font-size: 0.7rem; }
+
+      /* Events */
+      .event-row { padding: 0.5rem 0; border-bottom: 1px solid #1c2128; font-size: 0.77rem; }
+      .event-row:last-child { border-bottom: none; }
+      .event-time { color: var(--accent); font-size: 0.7rem; display: block; margin-bottom: 0.15rem; }
+      .event-type { color: var(--muted); font-size: 0.7rem; }
+      .event-detail { color: var(--text); margin-top: 0.15rem; line-height: 1.4; }
+
+      .empty { color: var(--muted); font-size: 0.8rem; padding: 0.5rem 0; }
+      .err { color: var(--bad); padding: 1rem; font-size: 0.85rem; }
+
+      /* Framework operations */
+      .ops-grid { display: grid; grid-template-columns: repeat(2, minmax(260px,1fr)); gap: 0.75rem; }
+      @media(max-width:900px){ .ops-grid { grid-template-columns: 1fr; } }
+      .ops-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.7rem 0.85rem; }
+      .ops-card h4 { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 0.45rem; text-transform: uppercase; letter-spacing: .05em; }
+      .ops-list { list-style: none; margin: 0; padding: 0; }
+      .ops-list li { font-size: 0.8rem; padding: 0.22rem 0; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; gap: 0.6rem; }
+      .ops-list li:last-child { border-bottom: none; }
+      .ops-kv { color: var(--muted); }
+
+      footer { padding: 0.5rem 1.5rem 1.5rem; color: #444c56; font-size: 0.75rem; }
+      footer code { color: #555d68; }
+
+      /* Opened as file:// — full-screen helper */
+      .file-gate {
+        display: none;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.25rem;
+        background: var(--bg);
+      }
+      .file-gate.visible { display: flex; }
+      .file-gate-card {
+        max-width: 34rem;
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.5rem 1.35rem;
+      }
+      .file-gate-card h2 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--text); }
+      .file-gate-card p { margin: 0 0 0.65rem; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+      .file-gate-card strong { color: var(--text); }
+      .file-gate-card code {
+        background: var(--surface2);
+        padding: 0.08rem 0.38rem;
+        border-radius: 4px;
+        font-size: 0.82rem;
+        color: var(--text);
+      }
+      .file-gate-row { margin: 0.75rem 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+      .file-gate-row label { font-size: 0.85rem; color: var(--muted); }
+      .file-gate-row input[type="number"] {
+        width: 5.5rem;
+        padding: 0.35rem 0.45rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 0.9rem;
+      }
+      .file-gate-btn {
+        display: inline-block;
+        margin-top: 0.35rem;
+        padding: 0.55rem 1.15rem;
+        background: var(--accent);
+        color: #fff !important;
+        border-radius: var(--r);
+        font-weight: 600;
+        font-size: 0.92rem;
+      }
+      .file-gate-btn:hover { filter: brightness(1.08); }
+      .file-gate-url {
+        margin-top: 0.85rem;
+        font-size: 0.8rem;
+        word-break: break-all;
+        color: var(--muted);
+      }
+
+      /* Interactive feedback forms */
+      .feedback-item {
+        margin-bottom: 0.85rem;
+        padding: 0.75rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+      }
+      .feedback-item-label {
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+      }
+      .feedback-item-sub {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-bottom: 0.5rem;
+      }
+      .feedback-textarea {
+        width: 100%;
+        padding: 0.5rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 0.8rem;
+        font-family: inherit;
+        resize: vertical;
+        margin-bottom: 0.5rem;
+        min-height: 3rem;
+      }
+      .feedback-btns {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .feedback-btn {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        border: 1px solid;
+        cursor: pointer;
+        background: var(--surface);
+        color: var(--text);
+        transition: all .15s;
+      }
+      .feedback-btn:hover { filter: brightness(1.15); }
+      .feedback-btn.approve { border-color: var(--ok); color: var(--ok); }
+      .feedback-btn.reject { border-color: var(--bad); color: var(--bad); }
+      .feedback-btn.discuss { border-color: var(--warn); color: var(--warn); }
+      .feedback-btn.selected { background: currentColor; color: var(--bg) !important; font-weight: 600; }
+
+      .generate-feedback-bar {
+        position: sticky;
+        bottom: 0;
+        padding: 0.85rem 1rem;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .generate-feedback-btn {
+        padding: 0.55rem 1.25rem;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: var(--r);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .generate-feedback-btn:hover { filter: brightness(1.1); }
+      .feedback-status {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="file-gate" class="file-gate" aria-live="polite">
+      <div class="file-gate-card">
+        <h2>This page was opened from disk (<code>file://</code>)</h2>
+        <p>Browsers block loading <code>workflow/state.json</code> that way. Use the local HTTP server instead.</p>
+        <p><strong>1.</strong> Terminal: <code>cd</code> to the <strong>repository root</strong> (folder that contains <code>workflow/</code> and <code>dashboard/</code>).</p>
+        <p><strong>2.</strong> Run: <code>python3 server.py</code> (included server with feedback write support).</p>
+        <div class="file-gate-row">
+          <label for="file-gate-port">Server port</label>
+          <input type="number" id="file-gate-port" value="8765" min="1" max="65535" />
+        </div>
+        <p><a id="file-gate-open" class="file-gate-btn" href="http://127.0.0.1:8765/dashboard/index.html">Open dashboard over HTTP</a></p>
+        <p class="file-gate-url">URL: <code id="file-gate-url-text">http://127.0.0.1:8765/dashboard/index.html</code></p>
+      </div>
+    </div>
+
+    <div class="app" id="app-shell">
+      <div class="topbar">
+        <h1 id="proj-name">Solo mode</h1>
+        <span class="sub" id="proj-meta">Loading…</span>
+        <span class="pill"><span class="pulse"></span> live</span>
+      </div>
+      <div class="body">
+        <main>
+          <div id="banner"></div>
+
+          <!-- Plan summary -->
+          <div class="section" id="plan-summary-section" style="display:none">
+            <div class="section-label">Planning team summary</div>
+            <div id="plan-summary" style="font-size:.85rem;color:var(--muted);line-height:1.6;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.9rem"></div>
+            <div class="meta-grid" id="plan-meta"></div>
+            <div class="generate-feedback-bar" id="feedback-bar" style="display:none">
+              <button class="generate-feedback-btn" onclick="generateFeedback()">Write docs/PLAN_FEEDBACK.md</button>
+              <span class="feedback-status" id="feedback-status">Fill notes above, then click to write docs/PLAN_FEEDBACK.md</span>
+            </div>
+          </div>
+
+          <!-- Iterations -->
+          <div class="section">
+            <div class="section-label">Iterations</div>
+            <div id="iterations"></div>
+          </div>
+
+          <!-- Task board -->
+          <div class="section" id="task-board-section">
+            <div class="section-label">Task board</div>
+            <p class="task-board-hint" id="task-board-hint">
+              Columns: <strong>To do</strong>, <strong>In progress</strong>, <strong>Done</strong>. Each card shows <strong>Agent</strong> (assignee) and normalized status from <code>workflow/state.json</code>.
+            </p>
+            <div class="task-board" id="task-board"></div>
+          </div>
+
+          <div class="section" id="framework-ops-section">
+            <div class="section-label">Framework operations</div>
+            <div id="framework-ops"></div>
+          </div>
+
+          <!-- Agents -->
+          <div class="section">
+            <div class="section-label">Agents</div>
+            <div class="agents-grid" id="agents"></div>
+          </div>
+        </main>
+
+        <aside>
+          <div class="aside-section">
+            <div class="aside-label">Recent events</div>
+            <div id="events"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <footer>
+      <strong>Feedback files:</strong> use <code>python3 server.py</code> from the repo root — <em>not</em>
+      <code>python3 -m http.server</code> (that only serves static files; <code>POST /api/feedback</code> returns 501).
+      Then open <code>http://127.0.0.1:8765/dashboard/index.html</code>.
+    </footer>
+
+    <script>
+      function esc(s) {
+        return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      }
+
+      function badgeClass(s) {
+        return { planned:"badge-planned", active:"badge-active", done:"badge-done", blocked:"badge-blocked" }[s] || "badge-planned";
+      }
+
+      function dotClass(s) {
+        return { active:"active", blocked:"blocked", done:"done" }[s] || "idle";
+      }
+
+      /** Normalize workflow task.status for columns + labels */
+      function canonicalTaskStatus(raw) {
+        var x = String(raw || "").toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+        if (x === "done" || x === "complete" || x === "completed") return "done";
+        if (x === "in_progress" || x === "active" || x === "doing") return "in_progress";
+        if (x === "cancelled" || x === "canceled") return "cancelled";
+        if (x === "blocked") return "blocked";
+        return "todo";
+      }
+
+      function labelForCanonicalStatus(c) {
+        var map = { todo: "To do", in_progress: "In progress", done: "Done", cancelled: "Cancelled", blocked: "Blocked" };
+        return map[c] || c;
+      }
+
+      function renderTaskCard(t) {
+        var c0 = canonicalTaskStatus(t.status);
+        var isBug = t.id && String(t.id).toUpperCase().indexOf("BUG") === 0;
+        var c = isBug ? "blocked" : c0;
+        var stClass = c;
+        var isDone = c0 === "done" && !isBug;
+        return (
+          "<div class='task-card" + (isDone ? " task-card-done" : "") + (isBug ? " task-card-bug" : "") + "'>" +
+          "<div class='task-card-top'>" +
+          "<span class='task-card-id'>" + esc(t.id) + "</span>" +
+          "<span class='task-card-status st-" + esc(stClass) + "'>" + esc(labelForCanonicalStatus(c)) + "</span>" +
+          "</div>" +
+          "<div class='task-card-title'>" + esc(t.title) + "</div>" +
+          "<div class='task-card-agent'>" +
+          "<span class='task-agent-label'>Agent</span> <strong>" + esc(t.agent || "—") + "</strong>" +
+          (t.iteration !== undefined && t.iteration !== null
+            ? " <span class='task-iter'>· Iter " + esc(String(t.iteration)) + "</span>"
+            : "") +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+      function renderTaskBoard(tasks, currentIteration) {
+        if (!tasks || !tasks.length) {
+          return "<p class='empty'>No tasks in <code>workflow/state.json</code>. Agents add tasks as they work.</p>";
+        }
+        var cols = { todo: [], in_progress: [], done: [] };
+        tasks.forEach(function(t) {
+          var c = canonicalTaskStatus(t.status);
+          var isBug = t.id && String(t.id).toUpperCase().indexOf("BUG") === 0;
+          if (isBug) {
+            cols.todo.push(t);
+            return;
+          }
+          if (c === "cancelled" || c === "blocked") {
+            cols.todo.push(t);
+          } else if (c === "done") {
+            cols.done.push(t);
+          } else if (c === "in_progress") {
+            cols.in_progress.push(t);
+          } else {
+            cols.todo.push(t);
+          }
+        });
+        function sortTasks(arr) {
+          return arr.slice().sort(function(a, b) {
+            var ia = a.iteration !== undefined && a.iteration !== null ? Number(a.iteration) : -999;
+            var ib = b.iteration !== undefined && b.iteration !== null ? Number(b.iteration) : -999;
+            if (ia !== ib) return ia - ib;
+            return String(a.id || "").localeCompare(String(b.id || ""));
+          });
+        }
+        var headers = [
+          { key: "todo", title: "To do", items: sortTasks(cols.todo) },
+          { key: "in_progress", title: "In progress", items: sortTasks(cols.in_progress) },
+          { key: "done", title: "Done", items: sortTasks(cols.done) }
+        ];
+        return (
+          "<div class='task-board-inner'>" +
+          headers.map(function(col) {
+            return (
+              "<div class='task-col' data-col='" + esc(col.key) + "'>" +
+              "<div class='task-col-head'>" + esc(col.title) + "<span class='task-col-count'>" + col.items.length + "</span></div>" +
+              "<div class='task-col-body'>" +
+              (col.items.length ? col.items.map(renderTaskCard).join("") : "<p class='task-col-empty'>Empty</p>") +
+              "</div></div>"
+            );
+          }).join("") +
+          "</div>"
+        );
+      }
+
+      function riskClass(l) {
+        return { high:"risk-high", medium:"risk-medium", low:"risk-low" }[l] || "";
+      }
+
+      function toggleIter(id) {
+        const body = document.getElementById("ib-" + id);
+        const chev = document.getElementById("ic-" + id);
+        if (!body) return;
+        body.classList.toggle("open");
+        chev.classList.toggle("open");
+      }
+
+      function renderBanner(ps) {
+        const map = {
+          not_started: {
+            cls: "not_started", icon: "○",
+            title: "No plan yet",
+            body: "Run <code>/solo-plan</code> to have PO + Architect + Design + Tech lead collaboratively define iterations from the PRD."
+          },
+          awaiting_approval: {
+            cls: "awaiting", icon: "⚠",
+            title: "Plan awaiting your approval",
+            body: "Review the iterations below. For each <strong>assumption</strong> and <strong>risk</strong>, add notes and choose a decision (approve / needs discussion / reject). Then click <strong>Write docs/PLAN_FEEDBACK.md</strong> below. Re-run <code>/solo-plan</code> to adjust. Happy with the plan? Run <code>/solo-approve</code>."
+          },
+          approved: {
+            cls: "approved", icon: "✓",
+            title: "Plan approved — ready to build",
+            body: "Run <code>/iter 1</code> to start. The full SDLC (PO → Architect → Design → Backend → Frontend → QA → DevOps → PR → Tech lead → PO close) runs autonomously per iteration."
+          }
+        };
+        const b = map[ps] || map.not_started;
+        return "<div class='banner " + b.cls + "'><span class='bicon'>" + b.icon + "</span><div class='btxt'><strong>" + b.title + "</strong>" + b.body + "</div></div>";
+      }
+
+      function renderIterations(iters, hasPlan) {
+        if (!iters || !iters.length) return "<p class='empty'>No iterations defined yet. Run /solo-plan.</p>";
+        return iters.map(function(it) {
+          const agents = (it.primaryAgents || []).map(function(a) {
+            return "<span class='agent-chip'>" + esc(a) + "</span>";
+          }).join("");
+
+          const stories = hasPlan && it.stories && it.stories.length
+            ? "<table class='stories-table'><thead><tr><th>ID</th><th>Story</th><th>Acceptance</th></tr></thead><tbody>" +
+              it.stories.map(function(s) {
+                return "<tr><td class='story-id'>" + esc(s.id) + "</td><td>" + esc(s.story) + "</td><td style='color:var(--muted)'>" + esc(s.acceptance) + "</td></tr>";
+              }).join("") + "</tbody></table>"
+            : "<p class='empty' style='padding:.25rem 0'>Stories will appear after /solo-plan.</p>";
+
+          const dod = it.definitionOfDone
+            ? "<div class='iter-dod'><strong>Definition of done:</strong> " + esc(it.definitionOfDone) + "</div>"
+            : "";
+
+          const notes = hasPlan && (it.architectNotes || it.designNotes || it.techLeadNotes)
+            ? "<div class='agent-notes'>" +
+              (it.architectNotes ? "<div class='note-card architect'><div class='note-who'>Architect</div><div class='note-body'>" + esc(it.architectNotes) + "</div></div>" : "") +
+              (it.designNotes    ? "<div class='note-card design'><div class='note-who'>Design</div><div class='note-body'>" + esc(it.designNotes) + "</div></div>" : "") +
+              (it.techLeadNotes  ? "<div class='note-card tech_lead'><div class='note-who'>Tech lead</div><div class='note-body'>" + esc(it.techLeadNotes) + "</div></div>" : "") +
+              "</div>"
+            : "";
+
+          return "<div class='iter-card'>" +
+            "<div class='iter-head' onclick='toggleIter(" + it.id + ")'>" +
+            "<div class='iter-num'>I" + esc(it.id) + "</div>" +
+            "<div class='iter-goal'>" + esc(it.goal) + "</div>" +
+            "<div class='iter-agents'>" + agents + "</div>" +
+            "<span class='iter-status-badge " + badgeClass(it.status) + "'>" + esc(it.status) + "</span>" +
+            "<span class='chevron' id='ic-" + it.id + "'>▶</span>" +
+            "</div>" +
+            "<div class='iter-body' id='ib-" + it.id + "'>" +
+            dod + stories + notes +
+            "</div></div>";
+        }).join("");
+      }
+
+      function renderPlanMeta(plan, planStatus) {
+        if (!plan) return "";
+        let html = "";
+        const isAwaiting = planStatus === "awaiting_approval";
+
+        // Proposed stack
+        if (plan.proposedStack) {
+          html += "<div class='meta-card' style='grid-column:1/-1'><h4>Proposed Stack & Approach</h4>";
+          const s = plan.proposedStack;
+          
+          if (s.frontend) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='frontend'>" +
+              "<div class='feedback-item-label'>Frontend: " + esc(s.frontend.framework || "—") + "</div>" +
+              "<div class='feedback-item-sub'><strong>Rationale:</strong> " + esc(s.frontend.rationale || "—") + "</div>" +
+              "<div class='feedback-item-sub'>State: " + esc(s.frontend.stateManagement || "—") + " · Styling: " + esc(s.frontend.styling || "—") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='frontend' placeholder='Feedback on frontend choice...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-frontend\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-frontend\",0,\"suggest-alternative\")'>Suggest alternative</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          if (s.backend) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='backend'>" +
+              "<div class='feedback-item-label'>Backend: " + esc(s.backend.runtime || "—") + " · " + esc(s.backend.framework || "—") + "</div>" +
+              "<div class='feedback-item-sub'><strong>Rationale:</strong> " + esc(s.backend.rationale || "—") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='backend' placeholder='Feedback on backend choice...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-backend\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-backend\",0,\"suggest-alternative\")'>Suggest alternative</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          if (s.database) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='database'>" +
+              "<div class='feedback-item-label'>Database: " + esc(s.database.engine || "—") + " · Migration: " + esc(s.database.migrationTool || "—") + "</div>" +
+              "<div class='feedback-item-sub'><strong>Rationale:</strong> " + esc(s.database.rationale || "—") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='database' placeholder='Feedback on database choice...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-database\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-database\",0,\"suggest-alternative\")'>Suggest alternative</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          if (s.devops) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='devops'>" +
+              "<div class='feedback-item-label'>DevOps: " + esc(s.devops.ci || "—") + " · Deploy: " + esc(s.devops.deployment || "—") + "</div>" +
+              "<div class='feedback-item-sub'><strong>Rationale:</strong> " + esc(s.devops.rationale || "—") + "</div>" +
+              "<div class='feedback-item-sub'>Local dev: " + esc(s.devops.localDev || "—") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='devops' placeholder='Feedback on deployment strategy...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-devops\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-devops\",0,\"suggest-alternative\")'>Suggest alternative</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          if (s.qa) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='qa'>" +
+              "<div class='feedback-item-label'>QA Strategy: " + esc(s.qa.frameworks || "—") + "</div>" +
+              "<div class='feedback-item-sub'>Coverage: " + esc(s.qa.coverage || "—") + " · Playwright: " + (s.qa.playwrightAvailable ? "✓ Available" : "✗ Fallback to API tests") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='qa' placeholder='Feedback on QA strategy...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-qa\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-qa\",0,\"needs-more-coverage\")'>Needs more coverage</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          if (s.security) {
+            html += "<div class='feedback-item' data-type='stack' data-layer='security'>" +
+              "<div class='feedback-item-label'>Security: " + esc(s.security.passwordHashing || "—") + "</div>" +
+              "<div class='feedback-item-sub'>Secrets: " + esc(s.security.secrets || "—") + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='stack' data-layer='security' placeholder='Security concerns...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"stack-security\",0,\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"stack-security\",0,\"suggest-alternative\")'>Suggest alternative</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          }
+
+          html += "</div>";
+        }
+
+        if (plan.assumptions && plan.assumptions.length) {
+          html += "<div class='meta-card'><h4>Assumptions</h4>";
+          plan.assumptions.forEach(function(a, i) {
+            html += "<div class='feedback-item' data-type='assumption' data-idx='" + i + "'>" +
+              "<div class='feedback-item-label'>" + esc(a.text) + "</div>" +
+              "<div class='feedback-item-sub'>By: " + esc(a.madeBy) + " · If wrong: " + esc(a.impact) + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='assumption' data-idx='" + i + "' placeholder='Add your notes here...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"assumption\"," + i + ",\"approve\")'>Approve</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"assumption\"," + i + ",\"discuss\")'>Needs discussion</button>" +
+                "<button class='feedback-btn reject' onclick='selectDecision(this, \"assumption\"," + i + ",\"reject\")'>Reject</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          });
+          html += "</div>";
+        }
+
+        if (plan.risks && plan.risks.length) {
+          html += "<div class='meta-card'><h4>Risks</h4>";
+          plan.risks.forEach(function(r, i) {
+            html += "<div class='feedback-item' data-type='risk' data-idx='" + i + "'>" +
+              "<div class='feedback-item-label " + riskClass(r.likelihood) + "'>" + esc(r.text) + "</div>" +
+              "<div class='feedback-item-sub'>" + esc(r.likelihood) + " likelihood · Mitigation: " + esc(r.mitigation) + "</div>";
+            if (isAwaiting) {
+              html += "<textarea class='feedback-textarea' data-type='risk' data-idx='" + i + "' placeholder='Add your notes or request changes...'></textarea>" +
+                "<div class='feedback-btns'>" +
+                "<button class='feedback-btn approve' onclick='selectDecision(this, \"risk\"," + i + ",\"approve\")'>Accept risk</button>" +
+                "<button class='feedback-btn discuss' onclick='selectDecision(this, \"risk\"," + i + ",\"needs-attention\")'>Needs attention</button>" +
+                "<button class='feedback-btn reject' onclick='selectDecision(this, \"risk\"," + i + ",\"block\")'>Blocking</button>" +
+                "</div>";
+            }
+            html += "</div>";
+          });
+          html += "</div>";
+        }
+
+        if (plan.deferred && plan.deferred.length) {
+          html += "<div class='meta-card'><h4>Deferred scope</h4><ul class='meta-list'>" +
+            plan.deferred.map(function(d) {
+              return "<li><span class='ml-label'>" + esc(d.item) + "</span>" +
+                "<span class='ml-sub'>" + esc(d.reason) + " · Candidate: " + esc(d.candidate) + "</span></li>";
+            }).join("") + "</ul></div>";
+        }
+
+        if (isAwaiting && (plan.assumptions?.length || plan.risks?.length)) {
+          setTimeout(function() {
+            var bar = document.getElementById("feedback-bar");
+            if (bar) bar.style.display = "flex";
+          }, 0);
+        }
+
+        return html;
+      }
+
+      function renderAgents(agents) {
+        if (!agents) return "";
+        return Object.entries(agents).map(function(kv) {
+          const name = kv[0], a = kv[1];
+          return "<div class='agent-card'>" +
+            "<div class='agent-card-head'><span class='dot " + dotClass(a.status) + "'></span><span class='agent-name'>" + esc(name) + "</span></div>" +
+            "<div class='agent-focus'>" + esc(a.focus || "—") + "</div>" +
+            "<div class='agent-last'>Last: " + esc(a.lastAction || "—") + "</div>" +
+            "</div>";
+        }).join("");
+      }
+
+      function renderEvents(events) {
+        if (!events || !events.length) return "<p class='empty'>No events yet.</p>";
+        return events.slice().reverse().slice(0, 15).map(function(e) {
+          return "<div class='event-row'>" +
+            "<span class='event-time'>" + esc(e.at) + "</span>" +
+            "<span class='event-type'>" + esc(e.type) + (e.agent ? " · " + e.agent : "") + "</span>" +
+            "<div class='event-detail'>" + esc(e.detail) + "</div>" +
+            "</div>";
+        }).join("");
+      }
+
+      function initFileGate() {
+        var gate = document.getElementById("file-gate");
+        var app = document.getElementById("app-shell");
+        var foot = document.querySelector("footer");
+        if (gate) gate.classList.add("visible");
+        if (app) app.style.display = "none";
+        if (foot) foot.style.display = "none";
+
+        var portInput = document.getElementById("file-gate-port");
+        var openLink = document.getElementById("file-gate-open");
+        var urlText = document.getElementById("file-gate-url-text");
+
+        function updateUrl() {
+          var raw = portInput && portInput.value ? portInput.value : "8765";
+          var p = parseInt(raw, 10);
+          if (isNaN(p) || p < 1 || p > 65535) p = 8765;
+          if (portInput) portInput.value = String(p);
+          var url = "http://127.0.0.1:" + p + "/dashboard/index.html";
+          if (openLink) openLink.href = url;
+          if (urlText) urlText.textContent = url;
+        }
+
+        if (portInput) {
+          portInput.addEventListener("input", updateUrl);
+          portInput.addEventListener("change", updateUrl);
+        }
+        updateUrl();
+      }
+
+      var globalPlanData = null;
+      var refreshInterval = null;
+      var hasUnsavedFeedback = false;
+
+      function markFeedbackChanged() {
+        hasUnsavedFeedback = true;
+        var status = document.getElementById("feedback-status");
+        if (status) {
+          status.textContent = "⚠ You have unsaved notes — click 'Generate PLAN_FEEDBACK.md' when done (auto-refresh paused)";
+          status.style.color = "var(--warn)";
+        }
+      }
+
+      function clearFeedbackChanged() {
+        hasUnsavedFeedback = false;
+        var status = document.getElementById("feedback-status");
+        if (status) {
+          status.textContent = "Fill notes above, then click to copy markdown to clipboard";
+          status.style.color = "";
+        }
+      }
+
+      function selectDecision(btn, type, idx, decision) {
+        var container = btn.closest(".feedback-item");
+        if (!container) return;
+        var btns = container.querySelectorAll(".feedback-btn");
+        btns.forEach(function(b) { b.classList.remove("selected"); });
+        btn.classList.add("selected");
+        btn.dataset.decision = decision;
+        markFeedbackChanged();
+      }
+
+      function attachFeedbackListeners() {
+        var textareas = document.querySelectorAll(".feedback-textarea");
+        textareas.forEach(function(ta) {
+          ta.addEventListener("input", markFeedbackChanged);
+        });
+      }
+
+      function generateFeedback() {
+        if (!globalPlanData || !globalPlanData.plan) {
+          alert("No plan loaded.");
+          return;
+        }
+        var lines = ["# Plan feedback", "", "> Write your feedback here before re-running `/solo-plan`.", "> The planning team (PO + Architect + Design + Tech lead) will read this and adjust the plan accordingly.", "> After `/solo-plan` produces an updated `docs/PLAN.md`, clear or archive this file.", "", "---", ""];
+
+        var hasContent = false;
+
+        // Stack feedback
+        if (globalPlanData.plan.proposedStack) {
+          var stackSection = ["## Proposed stack feedback", ""];
+          var stackLayers = ["frontend", "backend", "database", "devops", "qa", "security"];
+          stackLayers.forEach(function(layer) {
+            var item = document.querySelector(".feedback-item[data-type='stack'][data-layer='" + layer + "']");
+            if (!item) return;
+            var textarea = item.querySelector("textarea");
+            var notes = textarea ? textarea.value.trim() : "";
+            var selectedBtn = item.querySelector(".feedback-btn.selected");
+            var decision = selectedBtn ? selectedBtn.dataset.decision : null;
+            if (notes || decision) {
+              hasContent = true;
+              var layerData = globalPlanData.plan.proposedStack[layer];
+              if (!layerData) return;
+              var title = layer.charAt(0).toUpperCase() + layer.slice(1);
+              stackSection.push("### " + title);
+              if (layerData.framework) stackSection.push("**Proposed:** " + layerData.framework);
+              if (layerData.runtime) stackSection.push("**Proposed:** " + layerData.runtime);
+              if (layerData.engine) stackSection.push("**Proposed:** " + layerData.engine);
+              if (layerData.frameworks) stackSection.push("**Proposed:** " + layerData.frameworks);
+              if (layerData.passwordHashing) stackSection.push("**Password hashing:** " + layerData.passwordHashing);
+              if (layerData.secrets) stackSection.push("**Secrets:** " + layerData.secrets);
+              if (decision) {
+                var labels = { approve: "✓ Approved", "suggest-alternative": "⚠ Suggest alternative", "needs-more-coverage": "⚠ Needs more coverage" };
+                stackSection.push("**Decision:** " + (labels[decision] || decision));
+              }
+              if (notes) {
+                stackSection.push("**Feedback:**");
+                stackSection.push(notes);
+              }
+              stackSection.push("");
+            }
+          });
+          if (stackSection.length > 2) lines = lines.concat(stackSection);
+        }
+
+        // Assumptions
+        var assumptions = globalPlanData.plan.assumptions || [];
+        var assumptionSection = ["## Assumptions feedback", ""];
+        assumptions.forEach(function(a, i) {
+          var item = document.querySelector(".feedback-item[data-type='assumption'][data-idx='" + i + "']");
+          if (!item) return;
+          var textarea = item.querySelector("textarea");
+          var notes = textarea ? textarea.value.trim() : "";
+          var selectedBtn = item.querySelector(".feedback-btn.selected");
+          var decision = selectedBtn ? selectedBtn.dataset.decision : null;
+          if (notes || decision) {
+            hasContent = true;
+            assumptionSection.push("### " + a.text);
+            assumptionSection.push("**Made by:** " + a.madeBy + " · **If wrong:** " + a.impact);
+            if (decision) {
+              var labels = { approve: "✓ Approved", discuss: "⚠ Needs discussion", reject: "✗ Rejected" };
+              assumptionSection.push("**Decision:** " + (labels[decision] || decision));
+            }
+            if (notes) {
+              assumptionSection.push("**Notes:**");
+              assumptionSection.push(notes);
+            }
+            assumptionSection.push("");
+          }
+        });
+        if (assumptionSection.length > 2) lines = lines.concat(assumptionSection);
+
+        // Risks
+        var risks = globalPlanData.plan.risks || [];
+        var riskSection = ["## Risks feedback", ""];
+        risks.forEach(function(r, i) {
+          var item = document.querySelector(".feedback-item[data-type='risk'][data-idx='" + i + "']");
+          if (!item) return;
+          var textarea = item.querySelector("textarea");
+          var notes = textarea ? textarea.value.trim() : "";
+          var selectedBtn = item.querySelector(".feedback-btn.selected");
+          var decision = selectedBtn ? selectedBtn.dataset.decision : null;
+          if (notes || decision) {
+            hasContent = true;
+            riskSection.push("### " + r.text);
+            riskSection.push("**Likelihood:** " + r.likelihood + " · **Mitigation:** " + r.mitigation);
+            if (decision) {
+              var labels = { approve: "✓ Accept risk", "needs-attention": "⚠ Needs attention", block: "✗ Blocking" };
+              riskSection.push("**Decision:** " + (labels[decision] || decision));
+            }
+            if (notes) {
+              riskSection.push("**Notes:**");
+              riskSection.push(notes);
+            }
+            riskSection.push("");
+          }
+        });
+        if (riskSection.length > 2) lines = lines.concat(riskSection);
+
+        if (!hasContent) {
+          lines.push("## No feedback provided", "", "(All assumptions and risks were left without notes or decisions.)", "");
+        }
+
+        lines.push("---", "", "## Free-form notes", "", "(Add any other concerns or requests here.)", "");
+
+        var markdown = lines.join("\n");
+
+        // POST to backend
+        var status = document.getElementById("feedback-status");
+        if (status) {
+          status.textContent = "Writing docs/PLAN_FEEDBACK.md...";
+          status.style.color = "var(--accent)";
+        }
+
+        fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markdown: markdown })
+        })
+        .then(function(res) {
+          if (res.ok) return res.json();
+          var st = res.status;
+          var hint = "";
+          if (st === 501 || st === 405 || st === 404) {
+            hint = " You are probably using plain `python3 -m http.server` — it cannot handle POST. Stop it and run from the repo root: `python3 server.py` (same port is fine), then try again.";
+          }
+          return res.text().then(function() {
+            throw new Error("HTTP " + st + hint);
+          });
+        })
+        .then(function(data) {
+          if (status) {
+            status.textContent = "✓ Wrote docs/PLAN_FEEDBACK.md — run /solo-plan to adjust the plan.";
+            status.style.color = "var(--ok)";
+          }
+          clearFeedbackChanged();
+          setTimeout(function() {
+            if (status) {
+              status.textContent = "Fill notes above, then click to write docs/PLAN_FEEDBACK.md";
+              status.style.color = "";
+            }
+          }, 5000);
+        })
+        .catch(function(err) {
+          if (status) {
+            status.textContent = "✗ Could not write file — " + err.message + ". Copy to clipboard instead?";
+            status.style.color = "var(--bad)";
+          }
+          if (confirm("Could not write docs/PLAN_FEEDBACK.md via server. Copy markdown to clipboard instead?")) {
+            copyToClipboardFallback(markdown);
+          }
+        });
+      }
+
+      function copyToClipboardFallback(markdown) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(markdown).then(function() {
+            var status = document.getElementById("feedback-status");
+            if (status) {
+              status.textContent = "✓ Copied to clipboard! Paste into docs/PLAN_FEEDBACK.md manually.";
+              status.style.color = "var(--ok)";
+            }
+            clearFeedbackChanged();
+          }).catch(function() {
+            downloadFeedback(markdown);
+          });
+        } else {
+          downloadFeedback(markdown);
+        }
+      }
+
+      function downloadFeedback(markdown) {
+        var blob = new Blob([markdown], { type: "text/markdown" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "PLAN_FEEDBACK.md";
+        a.click();
+        URL.revokeObjectURL(url);
+        var status = document.getElementById("feedback-status");
+        if (status) {
+          status.textContent = "✓ Downloaded PLAN_FEEDBACK.md — move it to docs/ and run /solo-plan.";
+          status.style.color = "var(--ok)";
+        }
+        clearFeedbackChanged();
+      }
+
+      async function fetchStateJson() {
+        const qs = "?t=" + Date.now();
+        const candidates = ["/workflow/state.json" + qs, "../workflow/state.json" + qs];
+        let lastErr = null;
+        for (var i = 0; i < candidates.length; i++) {
+          try {
+            const res = await fetch(candidates[i], { cache: "no-store" });
+            if (res.ok) return await res.json();
+            lastErr = new Error(res.status + " " + res.statusText + " (" + candidates[i] + ")");
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        throw lastErr || new Error("Could not load state");
+      }
+
+      async function fetchFrameworkMetrics() {
+        const qs = "?t=" + Date.now();
+        const candidates = ["/workflow/framework_metrics.json" + qs, "../workflow/framework_metrics.json" + qs];
+        for (var i = 0; i < candidates.length; i++) {
+          try {
+            const res = await fetch(candidates[i], { cache: "no-store" });
+            if (res.ok) return await res.json();
+          } catch (_) {}
+        }
+        return null;
+      }
+
+      function renderFrameworkOps(metrics) {
+        if (!metrics) {
+          return "<p class='empty'>No operational metrics yet. Run <code>python3 scripts/framework_metrics.py</code>.</p>";
+        }
+        var phaseRows = Object.entries(metrics.phaseDurationMinutes || {}).map(function(kv) {
+          var phase = kv[0], v = kv[1];
+          return "<li><span>" + esc(phase) + "</span><span class='ops-kv'>avg " + esc(v.avgMinutes) + "m · max " + esc(v.maxMinutes) + "m</span></li>";
+        }).join("") || "<li><span>No duration data</span><span class='ops-kv'>—</span></li>";
+
+        var retryRows = (metrics.retriesByRole || []).map(function(x) {
+          return "<li><span>" + esc(x.role) + "</span><span class='ops-kv'>" + esc(x.count) + "</span></li>";
+        }).join("") || "<li><span>No retries</span><span class='ops-kv'>0</span></li>";
+
+        var failureRows = (metrics.failuresByRole || []).map(function(x) {
+          return "<li><span>" + esc(x.role) + "</span><span class='ops-kv'>" + esc(x.count) + "</span></li>";
+        }).join("") || "<li><span>No failures</span><span class='ops-kv'>0</span></li>";
+
+        var blockRows = (metrics.topBlockCauses || []).map(function(x) {
+          return "<li><span>" + esc(x.cause) + "</span><span class='ops-kv'>" + esc(x.count) + "</span></li>";
+        }).join("") || "<li><span>No blocked causes</span><span class='ops-kv'>0</span></li>";
+
+        var totalTokens = metrics.tokenCost && metrics.tokenCost.totalTokens ? metrics.tokenCost.totalTokens : 0;
+        var totalCost = metrics.tokenCost && metrics.tokenCost.totalCostUsd ? metrics.tokenCost.totalCostUsd : 0;
+        var costRows = Object.entries((metrics.tokenCost && metrics.tokenCost.byPhase) || {}).map(function(kv) {
+          var phase = kv[0], v = kv[1];
+          return "<li><span>" + esc(phase) + "</span><span class='ops-kv'>" + esc(v.tokens) + " tok · $" + esc(v.costUsd) + "</span></li>";
+        }).join("") || "<li><span>No token/cost data in contracts</span><span class='ops-kv'>—</span></li>";
+
+        return (
+          "<div class='ops-grid'>" +
+          "<div class='ops-card'><h4>Phase duration (minutes)</h4><ul class='ops-list'>" + phaseRows + "</ul></div>" +
+          "<div class='ops-card'><h4>Retries by role</h4><ul class='ops-list'>" + retryRows + "</ul></div>" +
+          "<div class='ops-card'><h4>Failures by role</h4><ul class='ops-list'>" + failureRows + "</ul></div>" +
+          "<div class='ops-card'><h4>Top blocked causes</h4><ul class='ops-list'>" + blockRows + "</ul></div>" +
+          "<div class='ops-card' style='grid-column:1/-1'><h4>Token/cost by phase (total: " + esc(totalTokens) + " tok · $" + esc(totalCost) + ")</h4><ul class='ops-list'>" + costRows + "</ul></div>" +
+          "</div>"
+        );
+      }
+
+      async function load() {
+        try {
+          const d = await fetchStateJson();
+          const ops = await fetchFrameworkMetrics();
+          globalPlanData = d;
+
+          const ps = d.planStatus || "not_started";
+          const hasPlan = ps !== "not_started";
+
+          document.getElementById("proj-name").textContent = d.project || "Solo mode";
+          document.getElementById("proj-meta").textContent =
+            "Iteration " + (d.currentIteration || 0) + " · plan: " + ps;
+
+          document.getElementById("banner").innerHTML = renderBanner(ps);
+
+          // Plan summary
+          if (hasPlan && d.plan && d.plan.summary) {
+            document.getElementById("plan-summary-section").style.display = "";
+            document.getElementById("plan-summary").textContent = d.plan.summary;
+            document.getElementById("plan-meta").innerHTML = renderPlanMeta(d.plan, ps);
+            attachFeedbackListeners();
+          } else {
+            document.getElementById("plan-summary-section").style.display = "none";
+          }
+
+          document.getElementById("iterations").innerHTML = renderIterations(d.iterations, hasPlan);
+          document.getElementById("task-board").innerHTML = renderTaskBoard(d.tasks || [], d.currentIteration);
+          document.getElementById("framework-ops").innerHTML = renderFrameworkOps(ops);
+          var hint = document.getElementById("task-board-hint");
+          if (hint) {
+            var n = (d.tasks && d.tasks.length) || 0;
+            hint.innerHTML =
+              "<strong>" + n + "</strong> task(s). Columns: <strong>To do</strong>, <strong>In progress</strong>, <strong>Done</strong>. " +
+              "Each card: <strong>Agent</strong> = assignee. Status values <code>backlog</code>/<code>todo</code> → To do; " +
+              "<code>in_progress</code> → In progress; <code>done</code> → Done. Current iteration in state: <strong>" +
+              esc(String(d.currentIteration != null ? d.currentIteration : "—")) + "</strong>.";
+          }
+          document.getElementById("agents").innerHTML     = renderAgents(d.agents);
+          document.getElementById("events").innerHTML     = renderEvents(d.events);
+
+        } catch (e) {
+          document.getElementById("banner").innerHTML =
+            "<div class='err'>Could not load <code>workflow/state.json</code> — " + esc(e.message) +
+            "<br/><br/>Checklist: (1) Start the server from the <strong>repository root</strong> " +
+            "(the folder that contains <code>workflow/</code> and <code>dashboard/</code>). " +
+            "(2) Open <code>http://127.0.0.1:8765/dashboard/index.html</code> — not a <code>file://</code> path. " +
+            "(3) Same port as the server (default <code>python3 -m http.server 8765</code>).</div>";
+        }
+      }
+
+      if (window.location.protocol === "file:") {
+        initFileGate();
+      } else {
+        load();
+        refreshInterval = setInterval(function() {
+          if (!hasUnsavedFeedback) {
+            load();
+          }
+        }, 8000);
+
+        window.addEventListener("beforeunload", function(e) {
+          if (hasUnsavedFeedback) {
+            e.preventDefault();
+            e.returnValue = "You have unsaved feedback. Generate PLAN_FEEDBACK.md before leaving.";
+            return e.returnValue;
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
