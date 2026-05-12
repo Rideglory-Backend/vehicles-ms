@@ -43,6 +43,11 @@ export class VehiclesController {
     return vehicle;
   }
 
+  @MessagePattern('getVehicleById')
+  getVehicleById(@Payload('vehicleId', ParseUUIDPipe) vehicleId: string) {
+    return this.vehiclesService.findByIdOrNull(vehicleId);
+  }
+
   @MessagePattern('updateVehicle')
   update(@Payload() updateVehicleDto: UpdateVehiclePayloadDto) {
     const { id, ...data } = updateVehicleDto;

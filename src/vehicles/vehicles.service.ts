@@ -138,6 +138,12 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     return vehicle;
   }
 
+  findByIdOrNull(id: string) {
+    return this.vehicle.findUnique({
+      where: { id },
+    });
+  }
+
   async update(id: string, updateVehicleDto: UpdateVehicleDto) {
     if (updateVehicleDto.ownerId) {
       await this.validateOwnerExists(updateVehicleDto.ownerId);
