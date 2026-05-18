@@ -39,4 +39,20 @@ export class Vehicle {
 
     @IsBoolean()
     public isArchived?: boolean;
+
+    @IsOptional()
+    @IsString()
+    public engine?: string;
+
+    @IsOptional()
+    @IsString()
+    public horsepower?: string;
+
+    @IsOptional()
+    @IsString()
+    public torque?: string;
+
+    @IsOptional()
+    @IsString()
+    public weight?: string;
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { envs, USERS_SERVICE } from '../config';
 import { VehiclesService } from './vehicles.service';
+import { SoatService } from './soat.service';
 import { VehiclesController } from './vehicles.controller';
 
 @Module({
@@ -18,6 +19,6 @@ import { VehiclesController } from './vehicles.controller';
     ]),
   ],
   controllers: [VehiclesController],
-  providers: [VehiclesService],
+  providers: [VehiclesService, SoatService],
 })
 export class VehiclesModule {}

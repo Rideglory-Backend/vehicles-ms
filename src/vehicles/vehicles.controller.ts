@@ -1,11 +1,16 @@
 import { Controller, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
+import { SoatService } from './soat.service';
 import { CreateVehicleDto, SetMainVehiclePayloadDto, UpdateVehiclePayloadDto } from '@rideglory/contracts';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { CreateSoatDto } from './dto/create-soat.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
-  constructor(private readonly vehiclesService: VehiclesService) { }
+  constructor(
+    private readonly vehiclesService: VehiclesService,
+    private readonly soatService: SoatService,
+  ) {}
 
   @MessagePattern('createVehicle')
   create(@Payload() createVehicleDto: CreateVehicleDto) {
@@ -46,6 +51,35 @@ export class VehiclesController {
   @MessagePattern('getVehicleById')
   getVehicleById(@Payload('vehicleId', ParseUUIDPipe) vehicleId: string) {
     return this.vehiclesService.findByIdOrNull(vehicleId);
+  }
+
+  // ── SOAT ──────────────────────────────────────────────────────────────────────
+
+  @MessagePattern('upsertSoat')
+  upsertSoat(
+    @Payload()
+    payload: { vehicleId: string; ownerId: string; dto: CreateSoatDto },
+  ) {
+    return this.soatService.upsertSoat(
+      payload.vehicleId,
+      payload.ownerId,
+      payload.dto,
+    );
+  }
+
+  @MessagePattern('findSoatByVehicle')
+  findSoatByVehicle(
+    @Payload() payload: { vehicleId: string; ownerId: string },
+  ) {
+    return this.soatService.findSoatByVehicle(
+      payload.vehicleId,
+      payload.ownerId,
+    );
+  }
+
+  @MessagePattern('findSoatsExpiringIn')
+  findSoatsExpiringIn(@Payload('daysUntilExpiry') daysUntilExpiry: number) {
+    return this.soatService.findSoatsExpiringIn(daysUntilExpiry);
   }
 
   @MessagePattern('updateVehicle')

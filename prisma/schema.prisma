@@ -30,4 +30,20 @@ model Vehicle {
   /// Enforced in DB: partial unique index on (ownerId) WHERE isMainVehicle = true
   /// (see migration 20260508163433; partial unique index is SQL-only)
   isMainVehicle  Boolean   @default(false)
+  engine         String?
+  horsepower     String?
+  torque         String?
+  weight         String?
+}
+
+model Soat {
+  id           String   @id @default(uuid())
+  vehicleId    String   @unique
+  policyNumber String
+  startDate    DateTime
+  expiryDate   DateTime
+  insurer      String
+  documentUrl  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
