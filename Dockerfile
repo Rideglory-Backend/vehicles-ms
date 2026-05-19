@@ -1,30 +1,30 @@
 # ── Stage 1: BUILD ────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
-WORKDIR /build/vehicles-ms
-
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY rideglory-common-lib ../rideglory-common-lib
-COPY rideglory-contracts ../rideglory-contracts
+WORKDIR /build
+COPY rideglory-common-lib ./rideglory-common-lib
+COPY rideglory-contracts ./rideglory-contracts
 
+WORKDIR /build/vehicles-ms
 COPY vehicles-ms/package.json vehicles-ms/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY vehicles-ms/ .
-RUN pnpm exec prisma generate
+RUN DATABASE_URL=postgresql://x:x@localhost/x pnpm exec prisma generate
 RUN pnpm build
 
 # ── Stage 2: RUNTIME ──────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 
-WORKDIR /build/vehicles-ms
-
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY rideglory-common-lib ../rideglory-common-lib
-COPY rideglory-contracts ../rideglory-contracts
+WORKDIR /build
+COPY rideglory-common-lib ./rideglory-common-lib
+COPY rideglory-contracts ./rideglory-contracts
 
+WORKDIR /build/vehicles-ms
 COPY vehicles-ms/package.json vehicles-ms/pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
