@@ -29,6 +29,7 @@ WORKDIR /build/vehicles-ms
 COPY --from=builder /build/vehicles-ms/node_modules ./node_modules
 COPY --from=builder /build/vehicles-ms/dist ./dist
 COPY vehicles-ms/prisma ./prisma
+COPY vehicles-ms/prisma.config.ts ./prisma.config.ts
 COPY vehicles-ms/healthcheck.js ./healthcheck.js
 
 USER node
