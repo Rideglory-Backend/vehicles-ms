@@ -1,34 +1,36 @@
 # ── Stage 1: BUILD ────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build/vehicles-ms
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY rideglory-common-lib ../rideglory-common-lib
+COPY rideglory-contracts ../rideglory-contracts
 
-COPY . .
+COPY vehicles-ms/package.json vehicles-ms/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+COPY vehicles-ms/ .
 RUN pnpm exec prisma generate
 RUN pnpm build
 
 # ── Stage 2: RUNTIME ──────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 
-WORKDIR /app
+WORKDIR /build/vehicles-ms
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile && pnpm store prune
+COPY rideglory-common-lib ../rideglory-common-lib
+COPY rideglory-contracts ../rideglory-contracts
 
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=builder /app/dist ./dist
-COPY prisma ./prisma
-COPY healthcheck.js ./healthcheck.js
+COPY vehicles-ms/package.json vehicles-ms/pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
+
+COPY --from=builder /build/vehicles-ms/dist ./dist
+COPY vehicles-ms/prisma ./prisma
+COPY vehicles-ms/healthcheck.js ./healthcheck.js
 
 USER node
 
