@@ -61,6 +61,21 @@ export class SoatService extends PrismaClient implements OnModuleInit {
     return this.soat.findUnique({ where: { vehicleId } });
   }
 
+  async deleteSoat(vehicleId: string, ownerId: string) {
+    await this.validateVehicleOwnership(vehicleId, ownerId);
+
+    const existing = await this.soat.findUnique({ where: { vehicleId } });
+    if (!existing) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: `No SOAT found for vehicle ${vehicleId}`,
+      });
+    }
+
+    await this.soat.delete({ where: { vehicleId } });
+    return { success: true };
+  }
+
   /**
    * Returns all SOAT records that expire in exactly `daysUntilExpiry` days
    * (whole-day granularity, in UTC).

@@ -77,6 +77,11 @@ export class VehiclesController {
     );
   }
 
+  @MessagePattern('deleteSoat')
+  deleteSoat(@Payload() payload: { vehicleId: string; ownerId: string }) {
+    return this.soatService.deleteSoat(payload.vehicleId, payload.ownerId);
+  }
+
   @MessagePattern('findSoatsExpiringIn')
   findSoatsExpiringIn(@Payload('daysUntilExpiry') daysUntilExpiry: number) {
     return this.soatService.findSoatsExpiringIn(daysUntilExpiry);
