@@ -1,15 +1,18 @@
 import { Controller, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
 import { SoatService } from './soat.service';
+import { TecnomecanicaService } from './tecnomecanica.service';
 import { CreateVehicleDto, SetMainVehiclePayloadDto, UpdateVehiclePayloadDto } from '@rideglory/contracts';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateSoatDto } from './dto/create-soat.dto';
+import { CreateTecnomecanicaDto } from './dto/create-tecnomecanica.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
   constructor(
     private readonly vehiclesService: VehiclesService,
     private readonly soatService: SoatService,
+    private readonly tecnomecanicaService: TecnomecanicaService,
   ) {}
 
   @MessagePattern('createVehicle')
@@ -85,6 +88,47 @@ export class VehiclesController {
   @MessagePattern('findSoatsExpiringIn')
   findSoatsExpiringIn(@Payload('daysUntilExpiry') daysUntilExpiry: number) {
     return this.soatService.findSoatsExpiringIn(daysUntilExpiry);
+  }
+
+  // ── RTM (Tecnomecánica) ───────────────────────────────────────────────────
+
+  @MessagePattern('upsertTecnomecanica')
+  upsertTecnomecanica(
+    @Payload()
+    payload: { vehicleId: string; ownerId: string; dto: CreateTecnomecanicaDto },
+  ) {
+    return this.tecnomecanicaService.upsertTecnomecanica(
+      payload.vehicleId,
+      payload.ownerId,
+      payload.dto,
+    );
+  }
+
+  @MessagePattern('findTecnomecanicaByVehicle')
+  findTecnomecanicaByVehicle(
+    @Payload() payload: { vehicleId: string; ownerId: string },
+  ) {
+    return this.tecnomecanicaService.findTecnomecanicaByVehicle(
+      payload.vehicleId,
+      payload.ownerId,
+    );
+  }
+
+  @MessagePattern('deleteTecnomecanica')
+  deleteTecnomecanica(
+    @Payload() payload: { vehicleId: string; ownerId: string },
+  ) {
+    return this.tecnomecanicaService.deleteTecnomecanica(
+      payload.vehicleId,
+      payload.ownerId,
+    );
+  }
+
+  @MessagePattern('findTecnomecanicasExpiringIn')
+  findTecnomecanicasExpiringIn(
+    @Payload('daysUntilExpiry') daysUntilExpiry: number,
+  ) {
+    return this.tecnomecanicaService.findTecnomecanicasExpiringIn(daysUntilExpiry);
   }
 
   @MessagePattern('updateVehicle')
