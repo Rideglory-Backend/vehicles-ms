@@ -51,10 +51,9 @@ model Soat {
 model Tecnomecanica {
   id                String    @id @default(uuid())
   vehicleId         String    @unique
-  certificateNumber String
+  certificateNumber String?
   cdaName           String
-  cdaCode           String?
-  startDate         DateTime?
+  startDate         DateTime
   expiryDate        DateTime
   documentUrl       String?
   createdAt         DateTime  @default(now())

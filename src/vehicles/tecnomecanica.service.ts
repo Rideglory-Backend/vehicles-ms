@@ -31,34 +31,29 @@ export class TecnomecanicaService extends PrismaClient implements OnModuleInit {
     await this.validateVehicleOwnership(vehicleId, ownerId);
 
     const expiryDate = this.parseDate(dto.expiryDate, 'expiryDate');
+    const startDate = this.parseDate(dto.startDate, 'startDate');
 
-    let startDate: Date | undefined;
-    if (dto.startDate) {
-      startDate = this.parseDate(dto.startDate, 'startDate');
-      if (expiryDate <= startDate) {
-        throw new RpcException({
-          status: HttpStatus.BAD_REQUEST,
-          message: 'expiryDate must be after startDate',
-        });
-      }
+    if (expiryDate <= startDate) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'expiryDate must be after startDate',
+      });
     }
 
     return this.tecnomecanica.upsert({
       where: { vehicleId },
       create: {
         vehicleId,
-        certificateNumber: dto.certificateNumber,
+        certificateNumber: dto.certificateNumber ?? null,
         cdaName: dto.cdaName,
-        cdaCode: dto.cdaCode ?? null,
-        startDate: startDate ?? null,
+        startDate,
         expiryDate,
         documentUrl: dto.documentUrl ?? null,
       },
       update: {
-        certificateNumber: dto.certificateNumber,
+        certificateNumber: dto.certificateNumber ?? null,
         cdaName: dto.cdaName,
-        cdaCode: dto.cdaCode ?? null,
-        startDate: startDate ?? null,
+        startDate,
         expiryDate,
         documentUrl: dto.documentUrl ?? null,
       },
