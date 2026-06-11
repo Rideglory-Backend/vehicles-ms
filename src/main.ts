@@ -1,3 +1,4 @@
+import './instrument';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -27,7 +28,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new RpcAllExceptionsFilter());
+  app.useGlobalFilters(new RpcAllExceptionsFilter('vehicles-ms'));
 
   await app.listen();
   app.get(Logger).log(`Vehicles Microservice is running on port ${envs.port}`);
