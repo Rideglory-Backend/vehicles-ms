@@ -68,7 +68,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     await this.validateOwnerExists(createVehicleDto.ownerId);
 
     const existingCount = await this.vehicle.count({
-      where: { ownerId: createVehicleDto.ownerId },
+      where: { ownerId: createVehicleDto.ownerId, isArchived: false, isDeleted: false },
     });
 
     const { purchaseDate, ...rest } = createVehicleDto;
@@ -90,14 +90,15 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
 
   findByOwnerId(ownerId: string) {
     return this.vehicle.findMany({
-      where: { ownerId },
+      where: { ownerId, isDeleted: false, isArchived: false },
+      omit: { isDeleted: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   findMainVehicleByOwnerId(ownerId: string) {
     return this.vehicle.findFirst({
-      where: { ownerId, isMainVehicle: true },
+      where: { ownerId, isMainVehicle: true, isDeleted: false, isArchived: false },
     });
   }
 
@@ -126,13 +127,46 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
     });
   }
 
+  async softDeleteVehicle(vehicleId: string, ownerId: string) {
+    const existing = await this.vehicle.findUnique({ where: { id: vehicleId } });
+
+    if (!existing) {
+      throw new RpcException({ status: HttpStatus.NOT_FOUND, message: `Vehicle with id ${vehicleId} not found` });
+    }
+    if (existing.ownerId !== ownerId) {
+      throw new RpcException({ status: HttpStatus.FORBIDDEN, message: 'Vehicle not found or does not belong to this owner' });
+    }
+
+    return this.$transaction(async (tx) => {
+      const deleted = await tx.vehicle.update({
+        where: { id: vehicleId },
+        data: { isDeleted: true, isMainVehicle: false },
+      });
+
+      if (existing.isMainVehicle) {
+        const next = await tx.vehicle.findFirst({
+          where: { ownerId, isArchived: false, isDeleted: false },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (next) {
+          await tx.vehicle.update({ where: { id: next.id }, data: { isMainVehicle: true } });
+        }
+      }
+
+      return deleted;
+    });
+  }
+
   async findOne(id: string) {
     const vehicle = await this.vehicle.findUnique({
       where: { id }
     });
 
     if (!vehicle) {
-      throw new RpcException(`Vehicle with id ${id} not found`);
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: `Vehicle with id ${id} not found`,
+      });
     }
 
     return vehicle;

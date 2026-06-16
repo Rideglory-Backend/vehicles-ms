@@ -131,6 +131,11 @@ export class VehiclesController {
     return this.tecnomecanicaService.findTecnomecanicasExpiringIn(daysUntilExpiry);
   }
 
+  @MessagePattern('softDeleteVehicle')
+  softDeleteVehicle(@Payload() payload: { vehicleId: string; ownerId: string }) {
+    return this.vehiclesService.softDeleteVehicle(payload.vehicleId, payload.ownerId);
+  }
+
   @MessagePattern('updateVehicle')
   update(@Payload() updateVehicleDto: UpdateVehiclePayloadDto) {
     const { id, ...data } = updateVehicleDto;
