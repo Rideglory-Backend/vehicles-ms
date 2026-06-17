@@ -107,7 +107,7 @@ describe('TecnomecanicaService — business logic', () => {
     };
 
     it('returns the RTM record when owner matches', () => {
-      const record = { id: 'rtm-1', vehicleId: 'v-1', certificateNumber: 'CRT-001' };
+      const record = { id: 'rtm-1', vehicleId: 'v-1' };
       const result = simulateFind('owner-1', 'owner-1', record);
       expect(result.status).toBe(200);
       expect(result.data).toEqual(record);

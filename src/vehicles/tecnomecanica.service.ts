@@ -44,14 +44,12 @@ export class TecnomecanicaService extends PrismaClient implements OnModuleInit {
       where: { vehicleId },
       create: {
         vehicleId,
-        certificateNumber: dto.certificateNumber ?? null,
         cdaName: dto.cdaName,
         startDate,
         expiryDate,
         documentUrl: dto.documentUrl ?? null,
       },
       update: {
-        certificateNumber: dto.certificateNumber ?? null,
         cdaName: dto.cdaName,
         startDate,
         expiryDate,

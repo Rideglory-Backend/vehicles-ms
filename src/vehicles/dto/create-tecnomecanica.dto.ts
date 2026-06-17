@@ -2,10 +2,6 @@ import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateTecnomecanicaDto {
   @IsString()
-  @IsOptional()
-  certificateNumber?: string;
-
-  @IsString()
   @IsNotEmpty()
   cdaName: string;
 
