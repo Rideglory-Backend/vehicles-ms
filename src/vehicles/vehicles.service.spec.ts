@@ -12,6 +12,8 @@
  *  AC-7  findByIdOrNull has NO isDeleted filter (historical snapshots)
  *  AC-8  create() counts only non-archived non-deleted vehicles
  *  AC-9  findMainVehicleByOwnerId filters isDeleted:false, isArchived:false
+ *  AC-10a update() promotes unarchived vehicle to main when no active main exists
+ *  AC-10b update() does NOT promote when an active main already exists
  *  AC-11 findByOwnerId omits isDeleted field from returned shape
  */
 
@@ -381,6 +383,71 @@ describe('VehiclesService', () => {
 
       const createCall = (service.vehicle.create as jest.Mock).mock.calls[0][0];
       expect(createCall.data).toMatchObject({ isMainVehicle: false });
+    });
+  });
+
+  // ── AC-10a: update() promotes unarchived vehicle when no active main ──────
+
+  describe('update() — unarchive promotion (AC-10a)', () => {
+    it('promotes vehicle to isMainVehicle:true when unarchiving and no active main exists', async () => {
+      const archived = makeVehicle({ id: 'v-arch', ownerId: 'owner-1', isArchived: true, isMainVehicle: false });
+      (service.vehicle.findUnique as jest.Mock).mockResolvedValue(archived);
+
+      const mockTx = {
+        vehicle: {
+          update: jest.fn()
+            .mockResolvedValueOnce({ ...archived, isArchived: false })
+            .mockResolvedValueOnce({ ...archived, isArchived: false, isMainVehicle: true }),
+          findFirst: jest.fn().mockResolvedValue(null), // no active main
+        },
+      };
+
+      (service.$transaction as jest.Mock).mockImplementation(
+        async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
+      );
+
+      await service.update('v-arch', { isArchived: false, ownerId: 'owner-1' } as any);
+
+      // findFirst must check for an active main vehicle
+      expect(mockTx.vehicle.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ ownerId: 'owner-1', isMainVehicle: true, isArchived: false, isDeleted: false }),
+        }),
+      );
+
+      // second update must promote to isMainVehicle:true
+      expect(mockTx.vehicle.update).toHaveBeenCalledTimes(2);
+      expect(mockTx.vehicle.update).toHaveBeenLastCalledWith({
+        where: { id: 'v-arch' },
+        data: { isMainVehicle: true },
+      });
+    });
+  });
+
+  // ── AC-10b: update() does NOT promote when active main already exists ─────
+
+  describe('update() — no promotion when main already exists (AC-10b)', () => {
+    it('does NOT promote when unarchiving and an active main vehicle already exists', async () => {
+      const archived = makeVehicle({ id: 'v-arch', ownerId: 'owner-1', isArchived: true, isMainVehicle: false });
+      const existingMain = makeVehicle({ id: 'v-main', ownerId: 'owner-1', isArchived: false, isMainVehicle: true });
+
+      (service.vehicle.findUnique as jest.Mock).mockResolvedValue(archived);
+
+      const mockTx = {
+        vehicle: {
+          update: jest.fn().mockResolvedValue({ ...archived, isArchived: false }),
+          findFirst: jest.fn().mockResolvedValue(existingMain), // active main exists
+        },
+      };
+
+      (service.$transaction as jest.Mock).mockImplementation(
+        async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
+      );
+
+      await service.update('v-arch', { isArchived: false, ownerId: 'owner-1' } as any);
+
+      // update called only once (the unarchive itself, no promotion)
+      expect(mockTx.vehicle.update).toHaveBeenCalledTimes(1);
     });
   });
 });

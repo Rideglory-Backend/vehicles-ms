@@ -90,7 +90,7 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
 
   findByOwnerId(ownerId: string) {
     return this.vehicle.findMany({
-      where: { ownerId, isDeleted: false, isArchived: false },
+      where: { ownerId, isDeleted: false },
       omit: { isDeleted: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -183,9 +183,44 @@ export class VehiclesService extends PrismaClient implements OnModuleInit {
       await this.validateOwnerExists(updateVehicleDto.ownerId);
     }
 
-    await this.findOne(id);
+    const existing = await this.findOne(id);
 
     const { purchaseDate, ...rest } = updateVehicleDto;
+
+    const isUnarchiving = updateVehicleDto.isArchived === false && existing.isArchived === true;
+
+    if (isUnarchiving) {
+      const ownerId = updateVehicleDto.ownerId ?? existing.ownerId;
+      return this.$transaction(async (tx) => {
+        const updated = await tx.vehicle.update({
+          where: { id },
+          data: {
+            ...rest,
+            ...(purchaseDate !== undefined
+              ? {
+                  purchaseDate:
+                    purchaseDate === null || purchaseDate === ''
+                      ? null
+                      : this.normalizePurchaseDate(purchaseDate),
+                }
+              : {}),
+          },
+        });
+
+        const activeMain = await tx.vehicle.findFirst({
+          where: { ownerId, isMainVehicle: true, isArchived: false, isDeleted: false },
+        });
+
+        if (!activeMain) {
+          return tx.vehicle.update({
+            where: { id },
+            data: { isMainVehicle: true },
+          });
+        }
+
+        return updated;
+      });
+    }
 
     return this.vehicle.update({
       where: { id },
